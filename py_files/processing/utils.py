@@ -162,3 +162,26 @@ def printConfusionResults(confusion):
     print('#########')
     print("Ac:",round( sklearn.metrics.accuracy_score(confusion["y_pred"],confusion["y_test"]) ,4))
     print(tmp)
+
+
+def remove_false_observation( df ):
+    groups = df.groupby(['id'])
+    keys = groups.groups.keys()
+    _ids_noise = list()
+
+    for i in keys:
+        a = groups.get_group(i)['B9_mean'].to_numpy()
+        if (a[0] == a).all(0): 
+            _ids_noise.append(groups.get_group(i)['id'].head(1).values[0])
+
+    for id in _ids_noise:
+        df = df.drop(df[df.id == id].index)
+    return df
+
+def remove_false_observation_RF( df ):
+    ids_noise = list()
+    for idx, row in df.iterrows():
+        a = row[row.index.str.contains('B9')].to_numpy()
+        if (a[0] == a).all(0):
+            df = df.drop(df.index[idx])
+    return df

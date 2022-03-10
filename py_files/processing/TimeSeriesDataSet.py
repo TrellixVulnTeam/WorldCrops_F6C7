@@ -6,18 +6,68 @@ from torch.utils.data import Dataset
 import pandas as pd
 import random
 from tsaug import AddNoise, Convolve, Crop, Drift, Dropout, Pool, Quantize, Resize, Reverse, TimeWarp
-
+from random import randrange, uniform
 
 class OwnAugmentation():
 
-  def jitter(x, sigma=0.03):
-      # https://arxiv.org/pdf/1706.00527.pdf
-      return x + np.random.normal(loc=0., scale=sigma, size=x.shape)
+    def jitter(x, sigma=0.03):
+        # https://arxiv.org/pdf/1706.00527.pdf
+        return x + np.random.normal(loc=0., scale=sigma, size=x.shape)
 
-  def scaling(x, sigma=0.1):
-      # https://arxiv.org/pdf/1706.00527.pdf
-      factor = np.random.normal(loc=1., scale=sigma, size=(x.shape[0],x.shape[1]))
-      return np.multiply(x, factor[:,:])
+    def scaling(x, sigma=0.1):
+        # https://arxiv.org/pdf/1706.00527.pdf
+        factor = np.random.normal(loc=1., scale=sigma, size=(x.shape[0],x.shape[1]))
+        return np.multiply(x, factor[:,:])
+
+    def constant_reflectance_change(x, min = 0, max = 10 ):
+        '''
+        Shift band time series 
+        :param min/max: minimum and maximum value to apply
+        :param x: numpy array with band values
+        '''
+        shift = randrange(int(min), int(max))
+        return x + shift
+
+
+    def bands_reflectance_change(x, band_list):
+        '''
+        Shift band time series for each band
+        :param band_list: contains the shift from one data set to another (e.g. 2016 -> 2017) for each band
+        :param x: numpy array with band values
+        '''
+
+        for band in range(0,len(band_list)):
+            diff = int(band_list[band])
+            if diff <0:
+                shift = randrange(diff, 0)
+            else:
+                shift = randrange(0, diff)
+
+            x[:,band] = x[:,band] + shift
+
+        return x
+
+    def bands_noise(x, bands_noise):
+        '''
+        Add cloud noise for each band and a time point
+        :param bands_noise: noise values for each band
+        :param x: numpy array with band values
+        '''
+        _timestep = randrange(0, x.shape[0])
+        for band in range(0,len(bands_noise)):
+            x[_timestep,band] = x[_timestep,band] + bands_noise[band]
+        return x
+
+    def constant_noise(x, band_noise):
+        '''
+        Add same noise for all bands
+        :param bands_noise: noise value
+        :param x: numpy array with band values
+        '''
+
+        _timestep = randrange(0, x.shape[0])
+        x[_timestep,:] = band_noise
+        return x
 
 
 my_augmenter = (
@@ -582,4 +632,89 @@ class DriftNoiseAug(Dataset):
         '''
         return torch for y
         '''
+        return torch.tensor(y, dtype=torch.long)
+
+
+class Shift_TS(Dataset):
+
+    def __init__(self, data, factor=1, feature_list = [], target_col = 'NC', field_id = 'id', time_steps = 14, diff=np.array([0]), callback = None):
+        self.df = data
+        self.factor = factor
+        self.df = self.reproduce(data, self.factor)
+        self.target_col = target_col
+        self.feature_list = feature_list
+        self.time_steps = time_steps
+        self.diff = diff
+
+        if callback != None:
+            self.df = callback(self.df)
+
+        self._fields_amount = len(self.df[field_id].unique())*self.factor
+
+        #get numpy
+        self.y = self.df[self.target_col].values
+        self.field_ids = self.df[field_id].values
+        self.df = self.df[self.feature_list].values
+
+        if self.factor < 1:
+            print('Factor needs to be at least 1')
+            return
+        if self.y.size == 0:
+            print('Target column not in dataframe')
+            return
+        if self.field_ids.size == 0:
+            print('Field id not defined')
+            return
+        if len(self.diff) != len(self.feature_list):
+            print("Define max shift for each band in diff")
+            return
+        
+        #reshape to 3D
+        #field x T x D
+        self.df = self.df.reshape(int(self._fields_amount),self.time_steps, len(self.feature_list))
+        self.y = self.y.reshape(int(self._fields_amount),1, self.time_steps)
+        self.field_ids = self.field_ids.reshape(int(self._fields_amount),1, self.time_steps)
+
+
+    def reproduce(self, df, _size):
+        ''' reproduce the orginal df with factor X times'''
+        newdf = pd.DataFrame()
+        if _size > 1:
+            for idx in range(_size):
+                newdf = pd.concat([newdf, df.copy()], axis=0)
+                #print(len(newdf),_size)
+            return newdf
+        else:
+            return df
+
+    def __len__(self):
+        return self.df.shape[0]
+
+
+    def __getitem__(self, idx):
+        x = self.df[idx,:,:]
+        y = self.y[idx,0,0]
+        field_id = self.field_ids[idx,0,0]
+
+        aug_type = 0 #random.choice([0,1])
+
+        if aug_type == 0:
+            aug_x1 = OwnAugmentation.bands_reflectance_change(x, self.diff)
+            aug_x2 = OwnAugmentation.bands_reflectance_change(x, self.diff)
+        if aug_type == 1:
+            aug_x1 = OwnAugmentation.constant_noise(x, 7000)
+            aug_x2 = OwnAugmentation.constant_noise(x, 7000)
+
+        torchx = self.x2torch(x)
+        torchy = self.y2torch(y)
+
+        return (self.x2torch(aug_x1), self.x2torch(aug_x2)), torchx, torchy #, torch.tensor(field_id, dtype=torch.long)
+
+        
+    def x2torch(self, x):
+        '''return torch for x'''
+        return torch.from_numpy(x).type(torch.FloatTensor)
+
+    def y2torch(self, y):
+        '''return torch for y'''
         return torch.tensor(y, dtype=torch.long)

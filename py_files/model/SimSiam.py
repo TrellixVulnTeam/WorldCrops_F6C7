@@ -47,7 +47,7 @@ class SimSiam(nn.Module):
 
 class SimSiam_LM(pl.LightningModule):
     def __init__(self, backbone = nn.Module, num_ftrs=64, proj_hidden_dim=14, 
-    pred_hidden_dim=14, out_dim=14, lr=0.02, weight_decay=5e-4,momentum=0.9,epochs = 10):
+    pred_hidden_dim=14, out_dim=14, lr=0.02, weight_decay=5e-4,momentum=0.9, epochs = 10):
         super().__init__()
         
         self.lr = lr
@@ -55,6 +55,7 @@ class SimSiam_LM(pl.LightningModule):
         self.weight_decay = weight_decay
         self.epochs = epochs
 
+        self.ce = lightly.loss.NegativeCosineSimilarity()
         self.backbone = backbone
         self.model_type = 'SimSiam_LM'
         self.projection = lightly.models.modules.heads.ProjectionHead([
@@ -63,8 +64,7 @@ class SimSiam_LM(pl.LightningModule):
         ])
         self.prediction = SimSiamPredictionHead(out_dim,pred_hidden_dim,out_dim)
 
-        self.ce = lightly.loss.NegativeCosineSimilarity()
-
+        # parameters for logging
         self.avg_loss = 0.
         self.avg_output_std = 0.
         self.collapse_level = 0.
@@ -83,19 +83,22 @@ class SimSiam_LM(pl.LightningModule):
 
         z0 = z0.detach()
         z1 = z1.detach()
-        return (z0, p0),(z1, p1)
+        return (z0, p0),(z1, p1), f0
 
 
     def training_step(self, batch, batch_idx):
-        (x0, x1), _, _ = batch
-        (z0, p0),(z1, p1) = self.forward(x0,x1)
+        (x0, x1), _, y = batch
+
+        #print(x0.shape)
+        #print(y.shape)
+
+        (z0, p0),(z1, p1), embedding = self.forward(x0,x1)
 
         loss = 0.5 * (self.ce(z0, p1) + self.ce(z1, p0))
 
         #collapse based on https://docs.lightly.ai/tutorials/package/tutorial_simsiam_esa.html
         output = p0.detach()
         output = torch.nn.functional.normalize(output, dim=1)
-
         output_std = torch.std(output, 0)
         output_std = output_std.mean()
 
@@ -104,26 +107,32 @@ class SimSiam_LM(pl.LightningModule):
         self.avg_loss = w * self.avg_loss + (1 - w) * loss.item()
         self.avg_output_std = w * self.avg_output_std + (1 - w) * output_std.item()
 
-        self.log('train_loss_ssl', loss)
-        self.log('Avgloss', self.avg_loss)
-        self.log('Avgstd', self.avg_output_std)
-        return {'loss':loss}
+        self.logger.experiment.add_scalar('train_loss_ssl', loss, global_step=self.current_epoch)
+        self.logger.experiment.add_scalar('Avgloss', self.avg_loss, global_step=self.current_epoch)
+        self.logger.experiment.add_scalar('Avgstd', self.avg_output_std, global_step=self.current_epoch)
+        return {'loss':loss, 'y_true': y.detach(), 'embedding': embedding.detach()}
 
-    
     def training_epoch_end(self, outputs):
         # the level of collapse is large if the standard deviation of the l2
         # normalized output is much smaller than 1 / sqrt(dim)
         self.collapse_level = max(0., 1 - math.sqrt(self.out_dim) * self.avg_output_std)
-        self.log('Collapse Level', round(self.collapse_level,2))
+        #self.log('Collapse Level', round(self.collapse_level,2), logger=True)
+        self.logger.experiment.add_scalar('Collapse Level', round(self.collapse_level,2), global_step=self.current_epoch)
+
+        embedding_list = list()
+        y_true_list = list()
+
+        for item in outputs:
+            embedding_list.append(item['embedding'])
+            y_true_list.append(item['y_true'])
+        
+        #log every 10 epochs
+        if not self.current_epoch % 10:
+            self.logger.experiment.add_embedding( torch.cat(embedding_list), metadata=torch.cat(y_true_list), global_step=self.current_epoch, tag = 'pretraining embedding') 
 
 
     def validation_step(self, val_batch, batch_idx):
-        (x0, x1), _, _ = val_batch
- 
-        (z0, p0),(z1, p1) = self.forward(x0,x1)
-        loss = 0.5 * (self.ce(z0, p1) + self.ce(z1, p0))
-        self.log('val_loss_ssl', loss)
-        return {"loss":loss}
+        pass
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.lr,

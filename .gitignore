@@ -1,5 +1,6 @@
 
 
+
 #ignore virtual env and logs
 env/
 env_wc/*
@@ -32,12 +33,15 @@ py_files/experiments/tests/cifar-10-python.tar.gz
 lightning_logs/
 Pipfile
 Pipfile.lock
+py_files/experiments/tests/test_aug.py
 
 #pychache
 py_files/__pycache__/*
 py_files/download/__pycache__/*
 py_files/model/__pycache__/*
 py_files/processing/__pycache__/*
+
+
 
 #keep folder
 #!data/cropdata/France/.gitkeep 
