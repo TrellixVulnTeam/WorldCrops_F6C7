@@ -126,44 +126,47 @@ class Attention_LM(pl.LightningModule):
         #torch.Size([N,num_classes ])
         x = F.log_softmax(x, dim=-1)
         #torch.Size([N, num_classes])
-        return {'x' : x, 'embedding' : embedding}
+        return x, embedding
 
     def training_step(self, batch, batch_idx):
-        _,x, y = batch
-        data = self.forward(x)
-        y_pred = data['x']
-        embedding = data['embedding']
+        x, y = batch
+        y_pred,embedding = self.forward(x)
 
         loss = self.ce(y_pred, y)
-        self.log('train_loss', loss, prog_bar=True, logger=True)
+        
+
+        self.logger.experiment.add_scalar('train_loss', loss, global_step=self.current_epoch)
+
         y_true = y.detach()
         y_pred = y_pred.argmax(-1).detach()
-        return {'loss' : loss, 'y_pred' : y_pred, 'y_true' : y, 'embedding': embedding}
+        return {'loss' : loss, 'y_pred' : y_pred, 'y_true' : y, 'embedding': embedding.detach()}
 
     def training_epoch_end(self, outputs):
         y_true_list = list()
         y_pred_list = list()
         embedding_list = list()
+        loss = list()
 
         for item in outputs:
             y_true_list.append(item['y_true'])
             y_pred_list.append(item['y_pred'])
             embedding_list.append(item['embedding'])
+            loss.append(item['loss'])
 
-        acc = accuracy_score(torch.cat(y_true_list).cpu(),torch.cat(y_pred_list).cpu())
+        acc = accuracy_score(torch.cat(y_true_list),torch.cat(y_pred_list))
         #overall accuracy
-        self.log('OA',round(acc,2)) 
+        self.log('OA',round(acc,2),logger=True)
+        #self.logger.experiment.add_scalar('OA',round(acc,2))
+        self.logger.experiment.add_embedding( torch.cat(embedding_list), metadata=torch.cat(y_true_list), global_step=self.current_epoch) 
 
-        self.logger.experiment.add_embedding(
-            torch.cat(embedding_list), # Encodings per epoch
-            metadata=torch.cat(y_pred_list)) # Adding the labels per image to the plot
-            #label_img= ken plan grad
 
     def validation_step(self, val_batch, batch_idx):
-        _,x, y = val_batch
-        y_pred = self.forward(x)
+        x, y = val_batch
+        y_pred,embedding = self.forward(x)
         loss = self.ce(y_pred, y)
-        self.log('val_loss', loss)
+        self.log('val_loss', loss, logger=True)
+        #self.logger.experiment.add_scalar('val_loss', loss, global_step=self.current_epoch)
+
         y_true = y.detach()
         y_pred = y_pred.argmax(-1).detach()
         return {'loss' : loss, 'y_pred' : y_pred, 'y_true' : y}
@@ -179,17 +182,18 @@ class Attention_LM(pl.LightningModule):
 
         acc = accuracy_score(torch.cat(y_true_list).cpu(),torch.cat(y_pred_list).cpu())
         #overall accuracy
-        self.log('OA',round(acc,2))
+        self.log('OA',round(acc,2),logger=True)
+        #self.logger.experiment.add_scalar('OA',round(acc,2), global_step=self.current_epoch)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
 
     def test_step(self, test_batch, batch_idx):
-        _,x, y = test_batch
-        y_pred = self.forward(x)
+        x, y = test_batch
+        y_pred,embedding = self.forward(x)
         loss = self.ce(y_pred, y)
-        #self.log('test_results', loss,on_step=True,prog_bar=True)
+        self.log('test_results', loss,on_step=True,prog_bar=True,logger=True)
 
         y_true = y.detach()
         y_pred = y_pred.argmax(-1).detach()
@@ -209,11 +213,16 @@ class Attention_LM(pl.LightningModule):
 
         acc = accuracy_score(torch.cat(y_true_list).cpu(),torch.cat(y_pred_list).cpu())
         #Overall accuracy
-        self.log('OA',round(acc,2))
+        self.log('OA',round(acc,2), logger=True)
+        #self.logger.experiment.add_scalar('OA',round(acc,2), global_step=self.current_epoch)
+
+    def get_embeddings(save_image = ''):
+        pass
         
 
 
 # %%
+
 
 # %%
 test
@@ -249,9 +258,18 @@ dataiter = iter(dataloader_train)
 
 # %%
 from pytorch_lightning.loggers import TensorBoardLogger
+lr = 0.0016612
+batch_size = 1349
+num_workers=4
+input_dim=13
 
-test = Attention_LM(num_classes=7)
-logger = TensorBoardLogger("tb_logs", name="my_model")
+dm_bavaria = BavariaDataModule(data_dir = '../../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size, num_workers = num_workers, experiment='Experiment1')
+model = Attention_LM(input_dim=input_dim, num_classes = 6, n_head=4, nlayers=3, batch_size = batch_size, lr=lr)
 
-trainer = pl.Trainer(auto_scale_batch_size='power', gpus=0, deterministic=True, max_epochs=5,logger=logger)
-trainer.fit(test, dataloader_train)
+logger = TensorBoardLogger("embeddings", name="video2")
+trainer = pl.Trainer( deterministic=True, max_epochs= 100,logger=logger)
+trainer.fit( model, dm_bavaria )
+
+# %%
+trainer.test(model, dm_bavaria )
+# %%

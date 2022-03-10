@@ -47,6 +47,7 @@ from sklearn.metrics import classification_report
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from pytorch_lightning import Trainer, seed_everything
+from pytorch_lightning.loggers import TensorBoardLogger
 import copy
 #tsai could be helpful
 #from tsai.all import *
@@ -59,12 +60,17 @@ test_size = 0.25
 SEED = 42
 num_workers=4
 shuffle_dataset =True
-_epochs = 1
+_epochs = 100
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 lr = 0.0016612
-input_dim = 13
+input_dim = 9
 #PositonalEncoding
 PA = False
+
+logger1 = TensorBoardLogger("Results/Experimente", name="supervised2")
+logger2 = TensorBoardLogger("Results/Experimente", name="supervised2")
+logger3 = TensorBoardLogger("Results/Experimente", name="supervised2")
+logger4 = TensorBoardLogger("Results/Experimente", name="supervised2")
 
 def seed_torch(seed=42):
     random.seed(seed)
@@ -113,7 +119,10 @@ bavaria_test_reordered = pd.read_excel(
 #bavaria_reordered = bavaria_reordered.loc[~((bavaria_reordered.index == 0)|(bavaria_reordered.index == 1))]
 
 train_RF = utils.clean_bavarian_labels(bavaria_reordered)
+train_RF = utils.remove_false_observation_RF(train_RF)
 test_RF = utils.clean_bavarian_labels(bavaria_test_reordered)
+test_RF = utils.remove_false_observation_RF(test_RF)
+
 
 #experiment with train/test split for all data
 dm_bavaria = BavariaDataModule(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size, num_workers = num_workers, experiment='Experiment1')
@@ -152,7 +161,7 @@ model_copy = copy.deepcopy(model)
 ############################################################################
 # 
 #seed_everything(42, workers=True)
-trainer = pl.Trainer( deterministic=True, max_epochs= _epochs)
+trainer = pl.Trainer( deterministic=True, max_epochs= _epochs, logger=logger1)
 trainer.fit(model, datamodule=dm_bavaria)
 trainer.test(model, datamodule=dm_bavaria)
 
@@ -161,13 +170,13 @@ trainer.test(model, datamodule=dm_bavaria)
 model2 = Attention_LM(input_dim=input_dim, num_classes = 6, n_head=4, nlayers=3, batch_size = batch_size, lr=lr, PositonalEncoding=PA)
 model_copy2 = copy.deepcopy(model2)
 #torch.save(model_copy2, "../model/pretrained/orginal_model2.ckpt")
-trainer = pl.Trainer( deterministic=True, max_epochs= _epochs)
+trainer = pl.Trainer( deterministic=True, max_epochs= _epochs, logger=logger2)
 
 trainer.fit(model2, datamodule = dm_bavaria2)
 trainer.test(model2, datamodule = dm_bavaria2)
 
 # %%
-trainer = pl.Trainer( deterministic=True, max_epochs= _epochs)
+trainer = pl.Trainer( deterministic=True, max_epochs= _epochs, logger=logger3)
 model3 = Attention_LM(input_dim=input_dim, num_classes = 6, n_head=4, nlayers=3, batch_size = batch_size, lr=lr, PositonalEncoding=PA)
 model_copy3 = copy.deepcopy(model3)
 #torch.save(model_copy3, "../model/pretrained/orginal_model3.ckpt")
@@ -176,14 +185,17 @@ trainer.fit(model3, datamodule = dm_bavaria3)
 trainer.test(model3, datamodule = dm_bavaria3)
 
 # %%
-trainer = pl.Trainer( deterministic=True, max_epochs= _epochs)
+trainer = pl.Trainer( deterministic=True, max_epochs= _epochs, logger=logger4)
 model4 = Attention_LM(input_dim=input_dim, num_classes = 6, n_head=4, nlayers=3, batch_size = batch_size, lr=lr, PositonalEncoding=PA)
 model_copy4 = copy.deepcopy(model4)
 #torch.save(model_copy3, "../model/pretrained/orginal_model3.ckpt")
 
 trainer.fit(model4, datamodule = dm_bavaria4)
 trainer.test(model4, datamodule = dm_bavaria4)
+# %%
 
+
+# %%
 
  # %%
 #test without lightning
@@ -195,6 +207,7 @@ print("OA:",round(accuracy_score(y_true, y_pred),2))
 
 losses2, y_true2, y_pred2, y_score2 = test_epoch( model2, torch.nn.CrossEntropyLoss(), dm_bavaria2.test_dataloader(), device )
 losses3, y_true3, y_pred3, y_score3 = test_epoch( model3, torch.nn.CrossEntropyLoss(), dm_bavaria3.test_dataloader(), device )
+losses4, y_true4, y_pred4, y_score4 = test_epoch( model4, torch.nn.CrossEntropyLoss(), dm_bavaria4.test_dataloader(), device )
 
 print("2. Experiment:")
 print(classification_report(y_true2.cpu(), y_pred2.cpu()))
@@ -205,8 +218,8 @@ print(classification_report(y_true3.cpu(), y_pred3.cpu()))
 print("OA:",round(accuracy_score(y_true3, y_pred3),2))
 
 print("4. Experiment:")
-print(classification_report(y_true3.cpu(), y_pred3.cpu()))
-print("OA:",round(accuracy_score(y_true3, y_pred3),2))
+print(classification_report(y_true4.cpu(), y_pred4.cpu()))
+print("OA:",round(accuracy_score(y_true4, y_pred4),2))
 
 
 # %%

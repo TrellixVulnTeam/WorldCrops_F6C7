@@ -24,15 +24,25 @@ import pandas as pd
 import numpy as np
 from pytorch_lightning import Trainer, seed_everything
 import copy
+from pytorch_lightning.loggers import TensorBoardLogger
+
 #tsai could be helpful
 #from tsai.all import *
 #computer_setup()
 
 ################################
 #IARAI / ESA
-IARAI = True
+IARAI = False
 no_gpus = 1
 # no_gpus = [0,1,2,3,4,5,6]
+
+#directory with logs
+logger1 = TensorBoardLogger("Results/Experimente", name="test2")
+logger2 = TensorBoardLogger("Results/Experimente", name="test2")
+logger3 = TensorBoardLogger("Results/Experimente", name="test2")
+logger4 = TensorBoardLogger("Results/Experimente", name="test2")
+
+pretrained_dir = "Results/Experimente"
 ################################
 
 
@@ -41,9 +51,9 @@ batch_size = 1349
 test_size = 0.25
 num_workers=4
 shuffle_dataset =True
-_epochs = 2
-_epochs_fine = 300
-input_dim = 13
+_epochs = 100
+_epochs_fine = 30
+input_dim = 9
 #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 lr =  0.0016612
 
@@ -83,9 +93,9 @@ dm_bavaria4 = BavariaDataModule(data_dir = '../../data/cropdata/Bavaria/sentinel
 
 #SimSiam augmentation data
 #augment between 2016 and 2017 for each crop type
-dm_augmented = DataModule_augmentation(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size_sim, num_workers = num_workers)
+#dm_augmented = DataModule_augmentation(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size_sim, num_workers = num_workers)
 #augmentation between years independent of crop type
-dm_years = AugmentationExperiments(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size_sim, num_workers = num_workers, experiment='Experiment4')
+#m_years = AugmentationExperiments(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size_sim, num_workers = num_workers, experiment='Experiment4')
 
 # data for invariance between crops
 #dm_crops1 = AugmentationExperiments(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size_sim, num_workers = num_workers, experiment='Experiment3')
@@ -94,10 +104,10 @@ dm_years = AugmentationExperiments(data_dir = '../../data/cropdata/Bavaria/senti
 #dm_crops4 = AugmentationExperiments(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size_sim, num_workers = num_workers, experiment='Experiment7')
 
 #daniel datamodule mit statistiken
-dm_crops1 = AugmentationExperiments(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size_sim, num_workers = num_workers, experiment='Experiment8')
-dm_crops2 = AugmentationExperiments(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size_sim, num_workers = num_workers, experiment='Experiment9')
-dm_crops3 = AugmentationExperiments(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size_sim, num_workers = num_workers, experiment='Experiment10')
-dm_crops4 = AugmentationExperiments(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size_sim, num_workers = num_workers, experiment='Experiment11')
+#dm_crops1 = AugmentationExperiments(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size_sim, num_workers = num_workers, experiment='Experiment8')
+#dm_crops2 = AugmentationExperiments(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size_sim, num_workers = num_workers, experiment='Experiment9')
+#dm_crops3 = AugmentationExperiments(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size_sim, num_workers = num_workers, experiment='Experiment10')
+#dm_crops4 = AugmentationExperiments(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size_sim, num_workers = num_workers, experiment='Experiment11')
 
 #normale augmentation mit drift und noise
 dm_crops1 = AugmentationExperiments(data_dir = '../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx', batch_size = batch_size_sim, num_workers = num_workers, experiment='Experiment12')
@@ -115,13 +125,13 @@ model_sim = SimSiam_LM(backbone,num_ftrs=num_ftrs,proj_hidden_dim=proj_hidden_di
 
 
 if IARAI:
-    trainer = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs)
+    trainer = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs, logger=logger1)
 else:
-    trainer = pl.Trainer(deterministic=True, max_epochs = _epochs)
+    trainer = pl.Trainer(deterministic=True, max_epochs = _epochs, logger=logger1)
 
 #fit the first time with one augmentation
 trainer.fit(model_sim, datamodule=dm_crops1)
-torch.save(backbone, "../model/pretrained_b/pretraining1.ckpt")
+torch.save(backbone, pretrained_dir +"/pretraining1.ckpt")
 #%%
 #fit 
 transformer2 = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
@@ -129,11 +139,11 @@ backbone2 = nn.Sequential(*list(transformer2.children())[-2])
 model_sim2 = SimSiam_LM(backbone2,num_ftrs=num_ftrs,proj_hidden_dim=proj_hidden_dim,pred_hidden_dim=pred_hidden_dim,out_dim=out_dim,lr=lr)
 
 if IARAI:
-    trainer2 = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs)
+    trainer2 = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs, logger=logger2)
 else:
-    trainer2 = pl.Trainer(deterministic=True, max_epochs = _epochs)
+    trainer2 = pl.Trainer(deterministic=True, max_epochs = _epochs, logger=logger2)
 trainer2.fit(model_sim2, datamodule=dm_crops2)
-torch.save(backbone2, "../model/pretrained_b/pretraining2.ckpt")
+torch.save(backbone2, pretrained_dir +"/pretraining2.ckpt")
 
 #%%
 transformer3 = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
@@ -142,12 +152,12 @@ model_sim3 = SimSiam_LM(backbone3,num_ftrs=num_ftrs,proj_hidden_dim=proj_hidden_
 
 #fit for invariance between same crops
 if IARAI:
-    trainer3 = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs)
+    trainer3 = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs, logger=logger3)
 else:
-    trainer3 = pl.Trainer(deterministic=True, max_epochs = _epochs)
+    trainer3 = pl.Trainer(deterministic=True, max_epochs = _epochs, logger=logger3)
 
 trainer3.fit(model_sim3, datamodule=dm_crops3)
-torch.save(backbone3, "../model/pretrained_b/pretraining3.ckpt")
+torch.save(backbone3, pretrained_dir +"/pretraining3.ckpt")
 
 transformer4 = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
 backbone4 = nn.Sequential(*list(transformer4.children())[-2])
@@ -155,12 +165,12 @@ model_sim4 = SimSiam_LM(backbone4,num_ftrs=num_ftrs,proj_hidden_dim=proj_hidden_
 
 #fit for invariance between same crops
 if IARAI:
-    trainer4 = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs)
+    trainer4 = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs, logger=logger4)
 else:
-    trainer4 = pl.Trainer(deterministic=True, max_epochs = _epochs)
+    trainer4 = pl.Trainer(deterministic=True, max_epochs = _epochs, logger=logger4)
 
 trainer4.fit(model_sim4, datamodule=dm_crops4)
-torch.save(backbone4, "../model/pretrained_b/pretraining4.ckpt")
+torch.save(backbone4, pretrained_dir + "/pretraining4.ckpt")
 #%%
 
 #%%
@@ -178,9 +188,9 @@ head = nn.Sequential(*list(transformer1.children())[-1])
 
 transfer_model = Attention_Transfer(input_dim=input_dim, num_classes = 6, d_model=num_ftrs, backbone = backbone_copy1, head=head, batch_size = batch_size, finetune=True, lr=lr)
 if IARAI:
-    trainer = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs_fine)
+    trainer = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs_fine, logger=logger1)
 else:
-    trainer = pl.Trainer(deterministic=True, max_epochs= _epochs)
+    trainer = pl.Trainer(deterministic=True, max_epochs= _epochs_fine, logger=logger1)
     
 trainer.fit(transfer_model, datamodule = dm_bavaria)
 trainer.test(transfer_model, datamodule = dm_bavaria)
@@ -192,9 +202,9 @@ head2 = nn.Sequential(*list(transformer2.children())[-1])
 #use pretrained backbone and finetune 
 transfer_model2 = Attention_Transfer(input_dim=input_dim, num_classes = 6, d_model=num_ftrs, backbone = backbone_copy2, head=head2, batch_size = batch_size, finetune=True, lr=lr)
 if IARAI:
-    trainer = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs_fine)
+    trainer = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs_fine, logger=logger2)
 else:
-    trainer = pl.Trainer(deterministic=True, max_epochs= _epochs)
+    trainer = pl.Trainer(deterministic=True, max_epochs= _epochs_fine, logger=logger2)
 
 trainer.fit(transfer_model2, datamodule = dm_bavaria2)
 trainer.test(transfer_model2, datamodule = dm_bavaria2)
@@ -205,23 +215,23 @@ head3 = nn.Sequential(*list(transformer3.children())[-1])
 transfer_model3 = Attention_Transfer(input_dim=input_dim, num_classes = 6, d_model=num_ftrs, backbone = backbone_copy3, head=head3, batch_size = batch_size, finetune=True, lr=lr)
 
 if IARAI:
-    trainer = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs_fine)
+    trainer = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs_fine, logger=logger3)
 else:
-    trainer = pl.Trainer(deterministic=True, max_epochs= _epochs)
+    trainer = pl.Trainer(deterministic=True, max_epochs= _epochs_fine, logger=logger3)
 
 trainer.fit(transfer_model3, datamodule = dm_bavaria3)
 trainer.test(transfer_model3, datamodule = dm_bavaria3)
 
 # %%
 transformer4 = Attention(input_dim=input_dim, num_classes = 6, n_head=4, nlayers=3)
-head4 = nn.Sequential(*list(transformer3.children())[-1])
+head4 = nn.Sequential(*list(transformer4.children())[-1])
 
 transfer_model4 = Attention_Transfer(input_dim=input_dim, num_classes = 6, d_model=num_ftrs, backbone = backbone_copy4, head=head4, batch_size = batch_size, finetune=True, lr=lr)
 
 if IARAI:
-    trainer = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs_fine)
+    trainer = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs_fine, logger=logger4)
 else:
-    trainer = pl.Trainer(deterministic=True, max_epochs= _epochs)
+    trainer = pl.Trainer(deterministic=True, max_epochs= _epochs_fine, logger=logger4)
 
 trainer.fit(transfer_model4, datamodule = dm_bavaria4)
 trainer.test(transfer_model4, datamodule = dm_bavaria4)

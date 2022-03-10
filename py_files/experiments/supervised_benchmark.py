@@ -338,7 +338,9 @@ print(classification_report(y_true.cpu(), y_pred.cpu()))
 print("OA:",round(accuracy_score(y_true, y_pred),2))
 # %%
 
-logprobabilities
+
+
+
 # %%
 
 losses2, y_true2, y_pred2, y_score2 = test_epoch( model2, torch.nn.CrossEntropyLoss(), dataloader18_test, device )
@@ -539,3 +541,4 @@ samples
 # %%
 train_1617.describe()
 
+"""
