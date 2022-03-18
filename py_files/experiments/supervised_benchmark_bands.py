@@ -60,7 +60,7 @@ test_size = 0.25
 SEED = 42
 num_workers=4
 shuffle_dataset =True
-_epochs = 100
+_epochs = 30
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 lr = 0.0016612
 input_dim = 9
@@ -199,27 +199,27 @@ trainer.test(model4, datamodule = dm_bavaria4)
 
  # %%
 #test without lightning
-losses, y_true, y_pred, y_score = test_epoch( model, torch.nn.CrossEntropyLoss(), dm_bavaria.test_dataloader(), device )
+#losses, y_true, y_pred, y_score = test_epoch( model, torch.nn.CrossEntropyLoss(), dm_bavaria.test_dataloader(), device )
 
-print("1. Experiment:")
-print(classification_report(y_true.cpu(), y_pred.cpu()))
-print("OA:",round(accuracy_score(y_true, y_pred),2))
+#print("1. Experiment:")
+#print(classification_report(y_true.cpu(), y_pred.cpu()))
+#print("OA:",round(accuracy_score(y_true, y_pred),2))
 
-losses2, y_true2, y_pred2, y_score2 = test_epoch( model2, torch.nn.CrossEntropyLoss(), dm_bavaria2.test_dataloader(), device )
-losses3, y_true3, y_pred3, y_score3 = test_epoch( model3, torch.nn.CrossEntropyLoss(), dm_bavaria3.test_dataloader(), device )
-losses4, y_true4, y_pred4, y_score4 = test_epoch( model4, torch.nn.CrossEntropyLoss(), dm_bavaria4.test_dataloader(), device )
+#losses2, y_true2, y_pred2, y_score2 = test_epoch( model2, torch.nn.CrossEntropyLoss(), dm_bavaria2.test_dataloader(), device )
+#losses3, y_true3, y_pred3, y_score3 = test_epoch( model3, torch.nn.CrossEntropyLoss(), dm_bavaria3.test_dataloader(), device )
+#losses4, y_true4, y_pred4, y_score4 = test_epoch( model4, torch.nn.CrossEntropyLoss(), dm_bavaria4.test_dataloader(), device )
 
-print("2. Experiment:")
-print(classification_report(y_true2.cpu(), y_pred2.cpu()))
-print("OA:",round(accuracy_score(y_true2, y_pred2),2))
+#print("2. Experiment:")
+#print(classification_report(y_true2.cpu(), y_pred2.cpu()))
+#print("OA:",round(accuracy_score(y_true2, y_pred2),2))
 
-print("3. Experiment:")
-print(classification_report(y_true3.cpu(), y_pred3.cpu()))
-print("OA:",round(accuracy_score(y_true3, y_pred3),2))
+#print("3. Experiment:")
+#print(classification_report(y_true3.cpu(), y_pred3.cpu()))
+#print("OA:",round(accuracy_score(y_true3, y_pred3),2))
 
-print("4. Experiment:")
-print(classification_report(y_true4.cpu(), y_pred4.cpu()))
-print("OA:",round(accuracy_score(y_true4, y_pred4),2))
+#print("4. Experiment:")
+#print(classification_report(y_true4.cpu(), y_pred4.cpu()))
+#print("OA:",round(accuracy_score(y_true4, y_pred4),2))
 
 
 # %%
