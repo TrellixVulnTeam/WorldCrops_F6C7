@@ -430,15 +430,17 @@ class CropInvarianceAug(Dataset):
         #numpy with augmented data
         #size x 2 x T x D
         self.augmented = np.zeros((self.size, 2, self.time_steps, len(self.feature_list)))
+        self.labels = np.zeros((self.size, 1 ))
         self.sampleData()
 
 
     def sampleData(self):
         try:
             for idx in range(self.size):
-                ts1, ts2 = self.get_X1_X2(self.df, self.feature_list)
+                ts1, ts2, y = self.get_X1_X2(self.df, self.feature_list)
                 self.augmented[idx,0] = ts1
                 self.augmented[idx,1] = ts2
+                self.labels[idx,0] = y
         except:
             print('Error in data generation:', ts1.shape, ts2.shape, idx)
 
@@ -448,12 +450,23 @@ class CropInvarianceAug(Dataset):
         '''
         random_field = random.choice(data.id.unique())
         random_crop = random.choice(data.NC.unique())
-        #random_year = random.choice(data.Year.unique())
 
-        #choose random crop and then two random fields from this crop
+        #two different years
+        #year_list = data.Year.unique().tolist()
+        #random_year1 = random.choice(year_list)
+        #year_list.remove( random_year1 )
+        #random_year2 = random.choice(year_list)
+
+        #choose same crop but from different years
         field_id1 = random.choice(data[data.NC == random_crop].id.unique())
         field_id2 = random.choice(data[data.NC == random_crop].id.unique())
-        return data[data.id == field_id1][features].to_numpy(), data[data.id == field_id2][features].to_numpy()
+
+        X1 = data[data.id == field_id1][features].to_numpy()
+        X2 = data[data.id == field_id2][features].to_numpy()
+        X1 = OwnAugmentation.constant_noise(X1, 7000)
+        X2 = OwnAugmentation.constant_noise(X2, 7000)
+
+        return X1, X2, random_crop
 
     def __len__(self):
         return self.size
@@ -461,14 +474,16 @@ class CropInvarianceAug(Dataset):
     def __getitem__(self, idx):
         x1 = self.augmented[idx,0]
         x2 = self.augmented[idx,1]
+        y = self.labels[idx,0]
 
         #augmentation based on different years
         aug_x1 = self.x2torch(x1)
         aug_x2 = self.x2torch(x2)
+        y = self.y2torch(y)
 
         #None torch values for x,y
         x = torch.from_numpy(np.array(0)).type(torch.FloatTensor)
-        y = torch.from_numpy(np.array(0)).type(torch.FloatTensor)
+        #y = torch.from_numpy(y).type(torch.FloatTensor)
 
         return (aug_x1, aug_x2), x, y
 
@@ -478,6 +493,12 @@ class CropInvarianceAug(Dataset):
         '''
         #nb_obs, nb_features = self.x.shape
         return torch.from_numpy(x).type(torch.FloatTensor)
+
+    def y2torch(self, y):
+        '''
+        return torch for y
+        '''
+        return torch.tensor(y, dtype=torch.long)
 
 class YearInvarianceAug(Dataset):
     '''

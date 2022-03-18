@@ -198,9 +198,10 @@ class AugmentationExperiments(pl.LightningDataModule):
         #preprocess
         self.data = clean_bavarian_labels(self.data)
         self.data = remove_false_observation(self.data)
+        #self.data = self.data[(self.data['Date'] >= "03-30") & (self.data['Date'] <= "08-30")]
         self.data = rewrite_id_CustomDataSet(self.data)
         #add additional ids for augmentation
-        self.data = augment_df(self.data, [2016,2017,2018])
+        #self.data = augment_df(self.data, [2016,2017,2018])
 
         #data sets
         self.train = None
@@ -292,7 +293,7 @@ class AugmentationExperiments(pl.LightningDataModule):
 
         elif self.experiment == 'Experiment3':
             train, _ = self.experiment3()
-            ts_data = CropInvarianceAug(train, self.feature_list, size=10000)
+            ts_data = CropInvarianceAug(train, self.feature_list, size=10000, time_steps = 14)
 
         elif self.experiment == 'Experiment4':
             ''' Train invariance between years independent of crop type '''
@@ -302,17 +303,17 @@ class AugmentationExperiments(pl.LightningDataModule):
         elif self.experiment == 'Experiment5':
             ''' Train invariance between crops for 2016/2017 '''
             train = self.data[self.data.Year != 2018].copy()
-            ts_data = CropInvarianceAug(train, self.feature_list, size=10000)
+            ts_data = CropInvarianceAug(train, self.feature_list, size=10000, time_steps = 14)
 
         elif self.experiment == 'Experiment6':
             ''' Train invariance between crops for 2016/2017 + 5% from 2018 '''
             train, _ = self.experiment4()
-            ts_data = CropInvarianceAug(train, self.feature_list, size=10000)
+            ts_data = CropInvarianceAug(train, self.feature_list, size=10000, time_steps = 14)
 
         elif self.experiment == 'Experiment7':
             ''' Train invariance between crops for 2016/2017 + 10% from 2018 '''
             train, _ = self.experiment5()
-            ts_data = CropInvarianceAug(train, self.feature_list, size=10000)
+            ts_data = CropInvarianceAug(train, self.feature_list, size=10000, time_steps = 14)
 
         elif self.experiment == 'Experiment8':
             ''' Train invariance with all data '''
@@ -341,7 +342,7 @@ class AugmentationExperiments(pl.LightningDataModule):
             a = train.mean()[self.feature_list].to_numpy()
             b = test.mean()[self.feature_list].to_numpy()
             diff = b-a
-            ts_data = Shift_TS(train, factor=5, diff = diff, feature_list = self.feature_list, time_steps = 14)
+            ts_data = Shift_TS(train, factor=5, diff = diff, feature_list = self.feature_list, time_steps = 11)
 
         elif self.experiment == 'Experiment13':
             train = self.data[self.data.Year != 2018].copy()
@@ -351,7 +352,7 @@ class AugmentationExperiments(pl.LightningDataModule):
             a = train.mean()[self.feature_list].to_numpy()
             b = test.mean()[self.feature_list].to_numpy()
             diff = b-a
-            ts_data = Shift_TS(train, factor=5, diff = diff, feature_list = self.feature_list, time_steps = 14)
+            ts_data = Shift_TS(train, factor=5, diff = diff, feature_list = self.feature_list, time_steps = 11)
 
         elif self.experiment == 'Experiment14':
             train, test = self.experiment4()
@@ -359,7 +360,7 @@ class AugmentationExperiments(pl.LightningDataModule):
             a = train.mean()[self.feature_list].to_numpy()
             b = test.mean()[self.feature_list].to_numpy()
             diff = b-a
-            ts_data = Shift_TS(train, factor=5, diff = diff, feature_list = self.feature_list, time_steps = 14)
+            ts_data = Shift_TS(train, factor=5, diff = diff, feature_list = self.feature_list, time_steps = 11)
 
         elif self.experiment == 'Experiment15':
             ''' Train for 2016/2017 + 10% from 2018 '''
@@ -368,7 +369,8 @@ class AugmentationExperiments(pl.LightningDataModule):
             a = train.mean()[self.feature_list].to_numpy()
             b = test.mean()[self.feature_list].to_numpy()
             diff = b-a
-            ts_data = Shift_TS(train, factor=5, diff = diff, feature_list = self.feature_list, time_steps = 14)
+            ts_data = Shift_TS(train, factor=5, diff = diff, feature_list = self.feature_list, time_steps = 11)
+
 
         else:
             print('Experiment not definend')
