@@ -161,8 +161,8 @@ class TSAugmented(Dataset):
         n_features = len(data.NC.unique())
         n_years = len(data.Year.unique())
         self.n_years = n_years
-        n_channels = 13
-        n_tsteps = 14
+        n_channels = len(self.feature_list)
+        n_tsteps = self.time_steps
         n_samples = 100
         entries = data.shape[0]
         # : Required data format
@@ -241,10 +241,6 @@ class TSAugmented(Dataset):
         return torch for y
         '''
         return torch.tensor(y, dtype=torch.long)
-
-
-
-
 
 
 class TimeSeriesPhysical(Dataset):
@@ -463,6 +459,99 @@ class CropInvarianceAug(Dataset):
 
         X1 = data[data.id == field_id1][features].to_numpy()
         X2 = data[data.id == field_id2][features].to_numpy()
+        #X1 = OwnAugmentation.constant_noise(X1, 7000)
+        #X2 = OwnAugmentation.constant_noise(X2, 7000)
+
+        return X1, X2, random_crop
+
+    def __len__(self):
+        return self.size
+
+    def __getitem__(self, idx):
+        x1 = self.augmented[idx,0]
+        x2 = self.augmented[idx,1]
+        y = self.labels[idx,0]
+
+        #augmentation based on different years
+        aug_x1 = self.x2torch(x1)
+        aug_x2 = self.x2torch(x2)
+        y = self.y2torch(y)
+
+        #None torch values for x,y
+        x = torch.from_numpy(np.array(0)).type(torch.FloatTensor)
+        #y = torch.from_numpy(y).type(torch.FloatTensor)
+
+        return (aug_x1, aug_x2), x, y
+
+    def x2torch(self, x):
+        '''
+        return torch for x
+        '''
+        #nb_obs, nb_features = self.x.shape
+        return torch.from_numpy(x).type(torch.FloatTensor)
+
+    def y2torch(self, y):
+        '''
+        return torch for y
+        '''
+        return torch.tensor(y, dtype=torch.long)
+
+class CropInvarianceAug2(Dataset):
+    '''
+    :param data: dataset of type pandas.DataFrame
+    :param target_col: targeted column name
+    :param feature_list: list with target features
+    '''
+
+    def __init__(self, data, feature_list = [], target_col = 'NC', field_id = 'id', time_steps = 14, callback = None, size = 0):
+        self.df = data
+        self.target_col = target_col
+        self.feature_list = feature_list
+        self.time_steps = time_steps
+        self.size = size
+
+        if self.size == 0:
+            print('Define data size')
+            return
+        if callback != None:
+            self.df = callback(self.df)
+
+        #numpy with augmented data
+        #size x 2 x T x D
+        self.augmented = np.zeros((self.size, 2, self.time_steps, len(self.feature_list)))
+        self.labels = np.zeros((self.size, 1 ))
+        self.sampleData()
+
+
+    def sampleData(self):
+        try:
+            for idx in range(self.size):
+                ts1, ts2, y = self.get_X1_X2(self.df, self.feature_list)
+                self.augmented[idx,0] = ts1
+                self.augmented[idx,1] = ts2
+                self.labels[idx,0] = y
+        except:
+            print('Error in data generation:', ts1.shape, ts2.shape, idx)
+
+        
+    def get_X1_X2(self, data, features):
+        '''Returns two different timeseries for the same crop
+        '''
+        random_field = random.choice(data.id.unique())
+        random_crop = random.choice(data.NC.unique())
+
+        #two different years
+        #year_list = data.Year.unique().tolist()
+        #random_year1 = random.choice(year_list)
+        #year_list.remove( random_year1 )
+        #random_year2 = random.choice(year_list)
+
+        #choose same crop but from different years
+        field_id1 = random.choice(data[data.NC == random_crop].id.unique())
+        field_id2 = random.choice(data[data.NC == random_crop].id.unique())
+
+        X1 = data[data.id == field_id1][features].to_numpy()
+        X2 = data[data.id == field_id2][features].to_numpy()
         X1 = OwnAugmentation.constant_noise(X1, 7000)
         X2 = OwnAugmentation.constant_noise(X2, 7000)
 
@@ -499,77 +588,6 @@ class CropInvarianceAug(Dataset):
         return torch for y
         '''
         return torch.tensor(y, dtype=torch.long)
-
-class YearInvarianceAug(Dataset):
-    '''
-    :param data: dataset of type pandas.DataFrame
-    :param target_col: targeted column name
-    :param feature_list: list with target features
-    '''
-
-    def __init__(self, data, feature_list = [], target_col = 'NC', field_id = 'id', time_steps = 14, callback = None, size = 0):
-        self.df = data
-        self.target_col = target_col
-        self.feature_list = feature_list
-        self.time_steps = time_steps
-        self.size = size
-
-        if self.size == 0:
-            print('Define data size')
-            return
-        if callback != None:
-            self.df = callback(self.df)
-
-        #numpy with augmented data
-        #size x 2 x T x D
-        self.augmented = np.zeros((self.size, 2, self.time_steps, len(self.feature_list)))
-        self.sampleData()
-
-
-    def sampleData(self):
-        try:
-            for idx in range(self.size):
-                ts1, ts2 = self.get_X1_X2(self.df, self.feature_list)
-                self.augmented[idx,0] = ts1
-                self.augmented[idx,1] = ts2
-        except:
-            print('Error in data generation:', ts1.shape, ts2.shape, idx)
-
-        
-    def get_X1_X2(self, data, features):
-        '''Returns two timeseries from different years without knowledge of the crop type
-        '''
-        random_year1 = random.choice([2016,2017])
-        random_year2 = 2018
-        #choose random crop and then two random fields from this crop
-        field_id1 = random.choice(data[data.Year == random_year1].id.unique())
-        field_id2 = random.choice(data[data.Year == random_year2].id.unique())
-        return data[data.id == field_id1][features].to_numpy(), data[data.id == field_id2][features].to_numpy()
-
-    def __len__(self):
-        return self.size
-
-    def __getitem__(self, idx):
-
-        x1 = self.augmented[idx,0]
-        x2 = self.augmented[idx,1]
-
-        #augmentation based on different years
-        aug_x1 = self.x2torch(x1)
-        aug_x2 = self.x2torch(x2)
-
-        #None torch values for x,y
-        x = torch.from_numpy(np.array(0)).type(torch.FloatTensor)
-        y = torch.from_numpy(np.array(0)).type(torch.FloatTensor)
-
-        return (aug_x1, aug_x2), x, y
-
-    def x2torch(self, x):
-        '''
-        return torch for x
-        '''
-        #nb_obs, nb_features = self.x.shape
-        return torch.from_numpy(x).type(torch.FloatTensor)
 
             
         
