@@ -162,6 +162,7 @@ class TSAugmented(Dataset):
         n_years = len(data.Year.unique())
         self.n_years = n_years
         n_channels = len(self.feature_list)
+        index = 4 + n_channels
         n_tsteps = self.time_steps
         n_samples = 100
         entries = data.shape[0]
@@ -174,10 +175,10 @@ class TSAugmented(Dataset):
                 for n in range(entries):
                     if(str(temp_data[n,-1])==str(data.Year.unique()[y])):
                         if(temp_data[n,3]==m):
-                            if (cnt==14):
+                            if (cnt==n_tsteps):
                                 fcnt += 1
                                 cnt = 0
-                            data_sorted[y,m,:n_channels,cnt,fcnt] = temp_data[n,4:17] 
+                            data_sorted[y,m,:n_channels,cnt,fcnt] = temp_data[n,4:index] 
                             cnt += 1
 
         # :: Initialize statistical augmentation object
