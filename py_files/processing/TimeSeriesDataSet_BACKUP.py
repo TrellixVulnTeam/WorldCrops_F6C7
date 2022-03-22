@@ -80,28 +80,21 @@ my_augmenter = (
 
 class AugmentationSampling():
     '''Obtain mean and std for each timestep from dataset and draw augmentation from that.
-       REQUIRES: data[type,channel,timestep,samples]
+       REQUIRES: data[year,type,channel,timestep,samples]
     '''
     def __init__(self, data) -> None:
-        self.years = list(data)
-        self.types = list(data['2016'])
-        self.channels = list(data['2016'][0])
-        self.time_steps = len(data['2016'][0][0][0])
-        self.mu = np.zeros((len(self.years), len(self.types), len(self.channels), self.time_steps))
-        self.std = np.zeros((len(self.years), len(self.types), len(self.channels), self.time_steps))
-        print('I found that:')
-        for n in range(3):
-            for m in range(6):
-                print('Year:', self.years[n], ' has a total of ', len(data[str(self.years[n])][m][0]), 'samples for type ', m)
-            print('------------------------')
-
-        for y in range(len(self.years)):
-            for t in range(len(self.types)):
-                for c in range(len(self.channels)):
-                    for s in range(self.time_steps):
-                        c_data = np.array(data[str(self.years[y])][t][c])
-                        self.mu[y,t,c,s] = np.mean(c_data[:,s])
-                        self.std[y,t,c,s] = np.std(c_data[:,s])
+        self.years = data.shape[0]
+        self.types = data.shape[1]
+        self.channels = data.shape[2]
+        self.time_steps = data.shape[3]
+        self.mu = torch.zeros((self.years, self.types, self.channels, self.time_steps))
+        self.std = torch.zeros((self.years, self.types, self.channels, self.time_steps))
+        for y in range(self.years):
+            for f in range(self.types):
+                for c in range(self.channels):
+                    for t in range(self.time_steps):
+                        self.mu[y,f,c,t] = torch.mean(torch.tensor(data[y,f,c,t,:]))
+                        self.std[y,f,c,t] = torch.std(torch.tensor(data[y,f,c,t,:]))
 
     def create_augmentation(self, year, type, n_samples):
         if str(year)=='2016':
@@ -110,11 +103,13 @@ class AugmentationSampling():
             year = 1
         if str(year)=='2018':
             year = 2
-        samples = np.zeros((n_samples, len(self.channels), self.time_steps))
+        samples = torch.zeros((n_samples, self.channels, self.time_steps))
         for n in range(n_samples):
-            for c in range(len(self.channels)):
+            for c in range(self.channels):
                 for t in range(self.time_steps):
-                    samples[n,c,t] = abs(np.random.normal(self.mu[year,type,c,t], self.std[year,type,c,t]))
+                    # print(year,n,c,t)
+                    # print(self.mu.shape, self.std.shape)
+                    samples[n,c,t] = torch.normal(mean=self.mu[year,type,c,t], std=self.std[year,type,c,t])
         return samples
 
 
@@ -167,7 +162,6 @@ class TSAugmented(Dataset):
         n_years = len(data.Year.unique())
         self.n_years = n_years
         n_channels = len(self.feature_list)
-        index = 4 + n_channels
         n_tsteps = self.time_steps
         n_samples = 100
         entries = data.shape[0]
@@ -180,17 +174,17 @@ class TSAugmented(Dataset):
                 for n in range(entries):
                     if(str(temp_data[n,-1])==str(data.Year.unique()[y])):
                         if(temp_data[n,3]==m):
-                            if (cnt==n_tsteps):
+                            if (cnt==14):
                                 fcnt += 1
                                 cnt = 0
-                            data_sorted[y,m,:n_channels,cnt,fcnt] = temp_data[n,4:index] 
+                            data_sorted[y,m,:n_channels,cnt,fcnt] = temp_data[n,4:17] 
                             cnt += 1
 
         # :: Initialize statistical augmentation object
-        self.aug_sample = AugmentationSampling(data_dict)
+        self.aug_sample = AugmentationSampling(data_sorted)
         # : Usage: self.aug_sample.create_augmentation([year], [type], [n_samples])
         # [year] = [2016, 2017, 2018] OR [0, 1, 2]
-        # : Below is an example that creates 2 samples for crop type 0 using the statistics obtained for 2016
+        # : Example creates 2 samples for crop type 0 using the statistics obtained for 2016
         # aug_samples = self.aug_sample.create_augmentation(2016,0,2)
         # OR IDENTICALLY:
         # aug_samples = self.aug_sample.create_augmentation(1,0,2)

@@ -1,0 +1,460 @@
+# %%
+# compare the crop type classification of RF and SimSiam
+import sys
+
+sys.path.append('/home/daniel/QM-Encoder/worldcrops/WorldCrops/WorldCrops/py_files')
+sys.path.append('..')
+
+from model import *
+from processing import *
+import math
+
+import torch.nn as nn
+import torchvision
+import lightly
+
+import contextily as ctx
+import matplotlib.pyplot as plt
+import breizhcrops
+import torch
+import seaborn as sns
+import numpy as np
+import pandas as pd
+import geopandas as gpd
+from breizhcrops import BreizhCrops
+from breizhcrops.datasets.breizhcrops import BANDS as allbands
+
+import torch
+import tqdm
+
+import sklearn
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import mean_squared_error as MSE
+from sklearn.preprocessing import MinMaxScaler
+import pickle
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_predict
+from sklearn.model_selection import cross_val_score
+
+import sklearn.datasets
+import pandas as pd
+import numpy as np
+# import umap
+# import umap.plot
+
+from torch.utils.data.sampler import SubsetRandomSampler
+import matplotlib.pyplot as plot
+
+#tsai could be helpful
+#from tsai.all import *
+#computer_setup()
+
+#some definitions for Transformers
+batch_size = 32
+test_size = 0.25
+SEED = 42
+num_workers=4
+shuffle_dataset =True
+_epochs = 1
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+# %%
+#load data for bavaria
+bavaria_train = pd.read_excel(
+    "../../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx")
+bavaria_test = pd.read_excel(
+    "../../../data/cropdata/Bavaria/sentinel-2/Test_bavaria.xlsx")
+
+bavaria_reordered = pd.read_excel(
+    '../../../data/cropdata/Bavaria/sentinel-2/data2016-2018.xlsx', index_col=0)
+bavaria_test_reordered = pd.read_excel(
+    '../../../data/cropdata/Bavaria/sentinel-2/TestData.xlsx', index_col=0)
+
+#delete first two entries with no change
+#bavaria_train = bavaria_train.loc[~((bavaria_train.id == 0)|(bavaria_train.id == 1))]
+#bavaria_reordered = bavaria_reordered.loc[~((bavaria_reordered.index == 0)|(bavaria_reordered.index == 1))]
+
+#bavaria_train.to_excel (r'test.xlsx', index = False, header=True)
+train = utils.clean_bavarian_labels(bavaria_train)
+test = utils.clean_bavarian_labels(bavaria_test)
+#delete class 6 which is the class Other with various unidentified crops
+train = train[train.NC != 6]
+test = test[test.NC != 6]
+
+train_RF = utils.clean_bavarian_labels(bavaria_reordered)
+test_RF = utils.clean_bavarian_labels(bavaria_test_reordered)
+#delete class 6
+train_RF = train_RF[train_RF.NC !=6]
+test_RF = test_RF[test_RF.NC != 6]
+
+train = utils.rewrite_id_CustomDataSet(train)
+test = utils.rewrite_id_CustomDataSet(test)
+#%%
+feature_list = train.columns[train.columns.str.contains('B')]
+# len(train.id.unique())
+#%%
+print(train.shape)
+print(train.keys())
+print(train['Year'][10000])
+trainx = train[feature_list].values
+df = trainx.reshape(1799,14, len(feature_list))
+#%%
+
+class AugmentationSampling():
+    '''Obtain mean and std for each timestep from dataset and draw augmentation from that.
+       REQUIRES: data[type,channel,timestep,samples]
+    '''
+    def __init__(self, data) -> None:
+        self.years = data.shape[0]
+        self.types = data.shape[1]
+        self.channels = data.shape[2]
+        self.time_steps = data.shape[3]
+        self.mu = torch.zeros((self.years, self.types, self.channels, self.time_steps))
+        self.std = torch.zeros((self.years, self.types, self.channels, self.time_steps))
+        for y in range(self.years):
+            for f in range(self.types):
+                for c in range(self.channels):
+                    for t in range(self.time_steps):
+                        self.mu[y,f,c,t] = torch.mean(torch.tensor(data[y,f,c,t,:]))
+                        self.std[y,f,c,t] = torch.std(torch.tensor(data[y,f,c,t,:]))
+
+    def create_augmentation(self, year, type, n_samples):
+        if str(year)=='2016':
+            year = 1
+        if str(year)=='2017':
+            year = 2
+        if str(year)=='2018':
+            year = 3
+        samples = torch.zeros((n_samples, self.channels, self.time_steps))
+        for n in range(n_samples):
+            for c in range(self.channels):
+                for t in range(self.time_steps):
+                    samples[n,c,t] = torch.normal(mean=self.mu[year,type,c,t], std=self.std[year,type,c,t])
+        return samples
+
+
+class TSDataSet(Dataset):
+    '''
+    :param data: dataset of type pandas.DataFrame
+    :param target_col: targeted column name
+    :param field_id: name of column with field ids
+    :param feature_list: list with target features
+    :param callback: preprocessing of dataframe
+    '''
+    def __init__(self, data, feature_list = [], target_col = 'NC', field_id = 'id', time_steps = 14, callback = None):
+        self.df = data
+        self.target_col = target_col
+        self.feature_list = feature_list
+        self.time_steps = time_steps
+
+        if callback != None:
+            self.df = callback(self.df)
+
+        self._fields_amount = len(self.df[field_id].unique())
+
+        #get numpy
+        self.y = self.df[self.target_col].values
+        self.field_ids = self.df[field_id].values
+        self.df = self.df[self.feature_list].values
+
+        if self.y.size == 0:
+            print('Target column not in dataframe')
+            return
+        if self.field_ids.size == 0:
+            print('Field id not defined')
+            return
+        
+        #reshape to 3D
+        #field x T x D
+        self.df = self.df.reshape(int(self._fields_amount),self.time_steps, len(self.feature_list))
+        self.y = self.y.reshape(int(self._fields_amount),1, self.time_steps)
+        self.field_ids = self.field_ids.reshape(int(self._fields_amount),1, self.time_steps)
+
+        # ::: Statistics for augmentation sampling
+        temp_data = np.array(data)
+        n_features = len(data.NC.unique())
+        n_years = len(data.Year.unique())
+        n_channels = 13
+        n_tsteps = 14
+        n_samples = 100
+        entries = data.shape[0]
+        # : Required data format
+        data_sorted = np.zeros((n_years,n_features,n_channels,n_tsteps,n_samples))
+        for y in range(n_years):
+            for m in range(n_features):
+                cnt = 0
+                fcnt = 0
+                for n in range(entries):
+                    if(str(temp_data[n,-1])==str(data.Year.unique()[y])):
+                        if(temp_data[n,3]==m):
+                            if (cnt==14):
+                                fcnt += 1
+                                cnt = 0
+                            data_sorted[y,m,:n_channels,cnt,fcnt] = temp_data[n,4:17] 
+                            cnt += 1
+        #         print(data.Year.unique()[y], fcnt)
+        # print(data_sorted.shape)
+        # if(str(temp_data[n,-1])=='2016'):
+        #     count1+=1
+        # if(str(temp_data[n,-1])=='2017'):
+        #     count2+=1
+        # print(count1, count2)
+        # :: Initialize statistical augmentation object
+        self.aug_sample = AugmentationSampling(data_sorted)
+        # : Usage: self.aug_sample.create_augmentation([type], [n_samples])
+        # : Example creates 2 samples for crop type 0
+
+        aug_samples = self.aug_sample.create_augmentation(2016,0,2)
+        fig, ax = plt.subplots(figsize=(8,5))
+        ax.plot(aug_samples[0,0])
+        ax.plot(aug_samples[1,0])
+
+        aug_samples = self.aug_sample.create_augmentation(2017,0,2)
+        fig, ax = plt.subplots(figsize=(8,5))
+        ax.plot(aug_samples[0,0])
+        ax.plot(aug_samples[1,0])
+
+        # aug_samples = self.aug_sample.create_augmentation(1,2)
+        # fig, ax = plt.subplots(figsize=(8,5))
+        # ax.plot(aug_samples[0,0])
+        # ax.plot(aug_samples[1,0])
+
+        # fig, ax = plt.subplots(figsize=(8,5))
+        # ax.plot(data_sorted[0,0,:,251])
+        # ax.plot(data_sorted[1,0,:,250])
+
+        # fig, ax = plt.subplots(figsize=(8,5))
+        # for n in range(6):
+        #     ax.plot(self.aug_sample.mu[n,0,:])  # mu[type, channel, timestep]
+        # # ax.title('$\mu$')
+
+        # fig, ax = plt.subplots(figsize=(8,5))
+        # for n in range(6):
+        #     ax.plot(self.aug_sample.std[n,0,:])  # std[type, channel, timestep]
+        # # ax.title('$\sigma$')
+
+        # fig, ax = plt.subplots(figsize=(8,5))
+        # for n in range(6):
+        #     ax.plot(self.aug_sample.mu[n,3,:])  # mu[type, channel, timestep]
+        # # ax.title('$\mu$')
+
+        # fig, ax = plt.subplots(figsize=(8,5))
+        # for n in range(6):
+        #     ax.plot(self.aug_sample.std[n,3,:])  # std[type, channel, timestep]
+        # # ax.title('$\sigma$')
+
+
+    def __len__(self):
+        return self.df.shape[0]
+
+    def __getitem__(self, idx):
+        x = self.df[idx,:,:]
+        y = self.y[idx,0,0]
+        field_id = self.field_ids[idx,0,0]
+
+        torchx = self.x2torch(x)
+        torchy = self.y2torch(y)
+        return torchx, torchy #, torch.tensor(field_id, dtype=torch.long)
+        
+    def x2torch(self, x):
+        '''
+        return torch for x
+        '''
+        #nb_obs, nb_features = self.x.shape
+        return torch.from_numpy(x).type(torch.FloatTensor)
+
+    def y2torch(self, y):
+        '''
+        return torch for y
+        '''
+        return torch.tensor(y, dtype=torch.long)
+
+print(train.keys())
+print(train['Year'])
+# cc = TSDataSet(train, feature_list.tolist())
+
+
+#%%
+# MAKE THIS SELF!
+features = ['B1_mean', 'B2_mean', 'B8A_mean']
+
+data = train
+keys = data.keys()
+channel_idx = []
+for n in range(keys.shape[0]):
+    for m in range(len(features)):
+        if (features[m]==keys[n]):
+            channel_idx.append(n)
+time_idx = [2,13]
+data2 = np.array(train)
+tot_samples = int(data2.shape[0]/14)
+
+data_dict = {}
+data_dict['2016'] = {}
+data_dict['2017'] = {}
+data_dict['2018'] = {}
+for n in range(6):
+    data_dict['2016'][n] = {}
+    data_dict['2017'][n] = {}
+    data_dict['2018'][n] = {}
+    for c in range(len(channel_idx)):
+        data_dict['2016'][n][c] = []
+        data_dict['2017'][n][c] = []
+        data_dict['2018'][n][c] = []
+
+for n in range(tot_samples):
+    for c in range(len(channel_idx)):
+        data_dict[str(data2[n*14,20])][data2[n*14,3]][c].append(data2[n*14+time_idx[0]:n*14+time_idx[1], channel_idx[c]])
+
+years = len(data_dict.keys())
+print(years)
+#%%
+class AugmentationSampling():
+    '''Obtain mean and std for each timestep from dataset and draw augmentation from that.
+       REQUIRES: data[type,channel,timestep,samples]
+    '''
+    def __init__(self, data) -> None:
+        self.years = list(data)
+        self.types = list(data['2016'])
+        self.channels = list(data['2016'][0])
+        self.time_steps = len(data['2016'][0][0][0])
+        self.mu = np.zeros((len(self.years), len(self.types), len(self.channels), self.time_steps))
+        self.std = np.zeros((len(self.years), len(self.types), len(self.channels), self.time_steps))
+        print('I found that:')
+        for n in range(3):
+            for m in range(6):
+                print('Year:', self.years[n], ' has a total of ', len(data[str(self.years[n])][m][0]), 'samples for type ', m)
+            print('------------------------')
+
+        for y in range(len(self.years)):
+            for t in range(len(self.types)):
+                for c in range(len(self.channels)):
+                    for s in range(self.time_steps):
+                        c_data = np.array(data[str(self.years[y])][t][c])
+                        self.mu[y,t,c,s] = np.mean(c_data[:,s])
+                        self.std[y,t,c,s] = np.std(c_data[:,s])
+
+    def create_augmentation(self, year, type, n_samples):
+        if str(year)=='2016':
+            year = 0
+        if str(year)=='2017':
+            year = 1
+        if str(year)=='2018':
+            year = 2
+        samples = np.zeros((n_samples, len(self.channels), self.time_steps))
+        for n in range(n_samples):
+            for c in range(len(self.channels)):
+                for t in range(self.time_steps):
+                    samples[n,c,t] = abs(np.random.normal(self.mu[year,type,c,t], self.std[year,type,c,t]))
+        return samples
+
+aug_sample = AugmentationSampling(data_dict)
+x = aug_sample.create_augmentation(2017, 0, 50)
+fig, ax = plt.subplots(figsize=(8,5))
+for n in range(50):
+    ax.plot(x[n,0])
+
+fig, ax = plt.subplots(figsize=(8,5))
+for n in range(len(data_dict['2017'][0][0])):
+    ax.plot(data_dict['2017'][0][0][n])
+
+# print(len(data_dict['2016'][0][0]))
+# print(len(data_dict['2016'][0][0][80]))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#%%
+# print(data2.shape)
+# print(train.keys())
+# print(train['Year'][8389])
+# print(train['id'][8387])
+# print(train['NC'][8387])
+n_features = len(data.NC.unique())
+n_years = len(data.Year.unique())
+n_channels = 13
+n_tsteps = 14
+n_samples = 100
+# entries = data.shape[0]
+# # : Required data format
+data_sorted = np.zeros((n_years,n_features,n_channels,n_tsteps,n_samples))
+# for n in range(0,data2.shape[0]):
+# for n in range(0,10):
+#     print(n, data2[n,20]-2016)
+#     print(n, data2[n,2])
+
+#%%
+# print(df.shape)
+# print(df[:10,0,0])
+# print(df)
+# y = y.reshape(int(_fields_amount),1, 14)
+# field_ids = field_ids.reshape(int(_fields_amount),1, time_steps)
+
+# %%
+id=1
+print(train[(train.Year == 2016)&(train.NC==id)][feature_list].mean())
+print(train[(train.Year == 2017)&(train.NC==id)][feature_list].mean())
+print(train[(train.Year == 2018)&(train.NC==id)][feature_list].mean())
+print("######")
+print(train[(train.Year == 2016)&(train.NC==id)][feature_list].std())
+print(train[(train.Year == 2017)&(train.NC==id)][feature_list].std())
+print(train[(train.Year == 2018)&(train.NC==id)][feature_list].std())
+print("######")
+print(train[(train.Year == 2016)][feature_list].mean())
+print(train[(train.Year == 2017)][feature_list].mean())
+print(train[(train.Year == 2018)][feature_list].mean())
+# %%
+train.id.unique()
+# %%
+data = train[feature_list].to_numpy()
+data = data.reshape(len(feature_list), len(train.id.unique()) ,14)
+
+# %%
+data[0].shape
+# %%
+def obtain_distribution(data):
+    channels = data.shape[0]
+    time_steps = data.shape[2]
+    mu = torch.zeros((channels, time_steps))
+    std = torch.zeros((channels, time_steps))
+    for m in range(channels):
+        for n in range(time_steps):
+            mu[m,n] = torch.mean(torch.tensor(data[m,:,n]))
+            std[m,n] = torch.std(torch.tensor(data[m,:,n]))
+    
+    return mu, std
+
+mu = torch.zeros((7,13,14))
+std = torch.zeros((7,13,14))
+for n in range(7):
+    mu[n], std[n] = obtain_distribution(data[n])
+#%%
+### DRAW SAMPLE FROM CROP TYPE SPECIFIC DISTRIBUTIONS
+def create_augmentation(type, mu, std):
+    sample = torch.zeros((13,14))
+    for m in range(16):
+        for n in range(14):
+            sample[m,n] = torch.normal(mean=mu[type,m,n], std=std[type,m,n])
+    return sample
+crop_type = 2
+sample = create_augmentation(crop_type, mu, std)
+
+import matplotlib.pyplot as plt
+fig, ax = plt.subplots(1,2, figsize=(15,7))
+channel = 3
+ax[0].plot(sample[channel], alpha=1.0, label='Sampled Type 2')
+ax[1].plot(mu[crop_type,channel], alpha=1.0, label='Averaged Type 2')
+ax[0].legend()
+ax[1].legend()
