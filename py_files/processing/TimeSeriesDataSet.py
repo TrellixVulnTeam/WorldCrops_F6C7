@@ -167,9 +167,9 @@ class TSAugmented(Dataset):
             for m in range(len(self.feature_list)):
                 if (self.feature_list[m]==keys[n]):
                     channel_idx.append(n)
-        time_idx = [2,13]
+        time_idx = [0,self.time_steps]
         data2 = np.array(data)
-        tot_samples = int(data2.shape[0]/14)
+        tot_samples = int(data2.shape[0]/self.time_steps)
 
         data_dict = {}
         data_dict['2016'] = {}
@@ -186,7 +186,7 @@ class TSAugmented(Dataset):
 
         for n in range(tot_samples):
             for c in range(len(channel_idx)):
-                data_dict[str(data2[n*14,20])][data2[n*14,3]][c].append(data2[n*14+time_idx[0]:n*14+time_idx[1], channel_idx[c]])
+                data_dict[str(data2[n*self.time_steps,20])][data2[n*self.time_steps,3]][c].append(data2[n*self.time_steps+time_idx[0]:n*self.time_steps+time_idx[1], channel_idx[c]])
 
         # :: Initialize statistical augmentation object
         self.aug_sample = AugmentationSampling(data_dict)
