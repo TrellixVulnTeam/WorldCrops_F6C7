@@ -2,10 +2,10 @@ python supervised_benchmark_bands.py > ../logs/supervised1.txt
 python supervised_benchmark_bands2.py > ../logs/supervised2.txt
 
 python simsiam_3_aug1.py > ../logs/aug1.txt
-#python simsiam_3_aug2.py > ../logs/aug2.txt
+python simsiam_3_aug2.py > ../logs/aug2.txt
 python simsiam_3_aug3.py > ../logs/aug3.txt
 
 python simsiam_3_aug4.py > ../logs/aug4.txt
-#python simsiam_3_aug5.py > ../logs/aug5.txt
+python simsiam_3_aug5.py > ../logs/aug5.txt
 python simsiam_3_aug6.py > ../logs/aug6.txt
 
