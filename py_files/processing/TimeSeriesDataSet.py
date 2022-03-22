@@ -114,7 +114,7 @@ class AugmentationSampling():
             for c in range(len(self.channels)):
                 for t in range(self.time_steps):
                     samples[n,c,t] = abs(np.random.normal(self.mu[year,type,c,t], self.std[year,type,c,t]))
-        return samples
+        return torch.from_numpy(samples).type(torch.FloatTensor)
 
 
 class TSAugmented(Dataset):
@@ -132,6 +132,8 @@ class TSAugmented(Dataset):
         self.target_col = target_col
         self.feature_list = feature_list
         self.time_steps = time_steps
+        
+        self.n_years = len(self.df.Year.unique())
         
 
         if callback != None:
