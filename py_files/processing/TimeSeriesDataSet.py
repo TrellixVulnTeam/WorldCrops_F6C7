@@ -1,4 +1,3 @@
-#%%
 import numpy as np
 from tqdm import tqdm
 import torch
@@ -162,29 +161,32 @@ class TSAugmented(Dataset):
         self.field_ids = self.field_ids.reshape(int(self._fields_amount),1, self.time_steps)
 
         # ::: Statistics for augmentation sampling
-        temp_data = np.array(data)
-        n_features = len(data.NC.unique())
-        n_years = len(data.Year.unique())
-        self.n_years = n_years
-        n_channels = len(self.feature_list)
-        index = 4 + n_channels
-        n_tsteps = self.time_steps
-        n_samples = 100
-        entries = data.shape[0]
-        # : Required data format
-        data_sorted = np.zeros((n_years,n_features,n_channels,n_tsteps,n_samples))
-        for y in range(n_years):
-            for m in range(n_features):
-                cnt = 0
-                fcnt = 0
-                for n in range(entries):
-                    if(str(temp_data[n,-1])==str(data.Year.unique()[y])):
-                        if(temp_data[n,3]==m):
-                            if (cnt==n_tsteps):
-                                fcnt += 1
-                                cnt = 0
-                            data_sorted[y,m,:n_channels,cnt,fcnt] = temp_data[n,4:index] 
-                            cnt += 1
+        keys = data.keys()
+        channel_idx = []
+        for n in range(keys.shape[0]):
+            for m in range(len(self.feature_list)):
+                if (self.feature_list[m]==keys[n]):
+                    channel_idx.append(n)
+        time_idx = [2,13]
+        data2 = np.array(data)
+        tot_samples = int(data2.shape[0]/14)
+
+        data_dict = {}
+        data_dict['2016'] = {}
+        data_dict['2017'] = {}
+        data_dict['2018'] = {}
+        for n in range(6):
+            data_dict['2016'][n] = {}
+            data_dict['2017'][n] = {}
+            data_dict['2018'][n] = {}
+            for c in range(len(channel_idx)):
+                data_dict['2016'][n][c] = []
+                data_dict['2017'][n][c] = []
+                data_dict['2018'][n][c] = []
+
+        for n in range(tot_samples):
+            for c in range(len(channel_idx)):
+                data_dict[str(data2[n*14,20])][data2[n*14,3]][c].append(data2[n*14+time_idx[0]:n*14+time_idx[1], channel_idx[c]])
 
         # :: Initialize statistical augmentation object
         self.aug_sample = AugmentationSampling(data_dict)
