@@ -81,20 +81,21 @@ class AugmentationSampling():
     '''Obtain mean and std for each timestep from dataset and draw augmentation from that.
        REQUIRES: data[type,channel,timestep,samples]
     '''
-    def __init__(self, data) -> None:
+    def __init__(self, data, years) -> None:
+        self.no_years = years
         self.years = list(data)
         self.types = list(data['2016'])
         self.channels = list(data['2016'][0])
         self.time_steps = len(data['2016'][0][0][0])
-        self.mu = np.zeros((len(self.years), len(self.types), len(self.channels), self.time_steps))
-        self.std = np.zeros((len(self.years), len(self.types), len(self.channels), self.time_steps))
+        self.mu = np.zeros((self.no_years, len(self.types), len(self.channels), self.time_steps))
+        self.std = np.zeros((self.no_years, len(self.types), len(self.channels), self.time_steps))
         print('I found that:')
-        for n in range(3):
+        for n in range(self.no_years):
             for m in range(6):
                 print('Year:', self.years[n], ' has a total of ', len(data[str(self.years[n])][m][0]), 'samples for type ', m)
             print('------------------------')
 
-        for y in range(len(self.years)):
+        for y in range(self.no_years):
             for t in range(len(self.types)):
                 for c in range(len(self.channels)):
                     for s in range(self.time_steps):
@@ -132,7 +133,6 @@ class TSAugmented(Dataset):
         self.target_col = target_col
         self.feature_list = feature_list
         self.time_steps = time_steps
-        
         self.n_years = len(self.df.Year.unique())
         
 
@@ -191,7 +191,7 @@ class TSAugmented(Dataset):
                 data_dict[str(data2[n*self.time_steps,20])][data2[n*self.time_steps,3]][c].append(data2[n*self.time_steps+time_idx[0]:n*self.time_steps+time_idx[1], channel_idx[c]])
 
         # :: Initialize statistical augmentation object
-        self.aug_sample = AugmentationSampling(data_dict)
+        self.aug_sample = AugmentationSampling(data_dict, self.n_years)
         # : Usage: self.aug_sample.create_augmentation([year], [type], [n_samples])
         # [year] = [2016, 2017, 2018] OR [0, 1, 2]
         # : Below is an example that creates 2 samples for crop type 0 using the statistics obtained for 2016
