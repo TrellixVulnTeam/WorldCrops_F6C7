@@ -144,7 +144,7 @@ class Attention_LM(pl.LightningModule):
             y_pred_list.append(item['y_pred'])
             embedding_list.append(item['embedding'])
 
-        acc = accuracy_score(torch.cat(y_true_list),torch.cat(y_pred_list))
+        acc = accuracy_score(torch.cat(y_true_list).cpu(),torch.cat(y_pred_list).cpu())
         #overall accuracy
         self.log('OA',round(acc,2), logger=True)
         if not self.current_epoch % 10:
@@ -171,7 +171,7 @@ class Attention_LM(pl.LightningModule):
             y_pred_list.append(item['y_pred'])
             
 
-        acc = accuracy_score(torch.cat(y_true_list),torch.cat(y_pred_list))
+        acc = accuracy_score(torch.cat(y_true_list).cpu(),torch.cat(y_pred_list).cpu())
         #overall accuracy
         self.log('OA',round(acc,2), logger=True)
 
@@ -201,7 +201,7 @@ class Attention_LM(pl.LightningModule):
             y_true_list.append(item['y_true'])
             y_pred_list.append(item['y_pred'])
 
-        acc = accuracy_score(torch.cat(y_true_list),torch.cat(y_pred_list))
+        acc = accuracy_score(torch.cat(y_true_list).cpu(),torch.cat(y_pred_list).cpu())
         #Overall accuracy
         self.log('OA',round(acc,2), logger=True)
 
@@ -273,7 +273,7 @@ class Attention_Transfer(pl.LightningModule):
             y_pred_list.append(item['y_pred'])
             embedding_list.append(item['embedding'])
 
-        acc = accuracy_score(torch.cat(y_true_list),torch.cat(y_pred_list))
+        acc = accuracy_score(torch.cat(y_true_list).cpu(),torch.cat(y_pred_list).cpu())
         #overall accuracy
         #self.log('OA',round(acc,2), on_epoch = True, logger=True) 
         self.logger.experiment.add_scalar('OA',round(acc,2), global_step=self.current_epoch)
@@ -302,7 +302,7 @@ class Attention_Transfer(pl.LightningModule):
             y_true_list.append(item['y_true'])
             y_pred_list.append(item['y_pred'])
 
-        acc = accuracy_score(torch.cat(y_true_list),torch.cat(y_pred_list))
+        acc = accuracy_score(torch.cat(y_true_list).cpu(),torch.cat(y_pred_list).cpu())
         #overall accuracy
         self.log('OA',round(acc,2), on_epoch = True, logger=True)
         #self.logger.experiment.add_scalar('OA',round(acc,2), global_step=self.current_epoch)
@@ -337,7 +337,7 @@ class Attention_Transfer(pl.LightningModule):
             y_true_list.append(item['y_true'])
             y_pred_list.append(item['y_pred'])
 
-        acc = accuracy_score(torch.cat(y_true_list),torch.cat(y_pred_list))
+        acc = accuracy_score(torch.cat(y_true_list).cpu(),torch.cat(y_pred_list).cpu())
         #Overall accuracy
         self.log('OA',round(acc,2), on_epoch = True, logger=True)
         #self.logger.experiment.add_scalar('OA',round(acc,2), global_step=self.current_epoch)
