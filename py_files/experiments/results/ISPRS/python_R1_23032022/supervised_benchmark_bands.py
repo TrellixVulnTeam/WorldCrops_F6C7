@@ -55,7 +55,7 @@ shuffle_dataset =True
 _epochs = 300
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 lr = 0.0016612
-input_dim = 13
+input_dim = 9
 #PositonalEncoding
 PA = False
 #data path 
@@ -116,13 +116,13 @@ test_RF = utils.remove_false_observation_RF(test_RF)
 
 
 #experiment with train/test split for all data
-dm_bavaria = BavariaDataModule2(data_dir = data_path, batch_size = batch_size, num_workers = num_workers, experiment='Experiment1')
+dm_bavaria = BavariaDataModule3(data_dir = data_path, batch_size = batch_size, num_workers = num_workers, experiment='Experiment1')
 #experiment with 16/17 train and 2018 test
-dm_bavaria2 = BavariaDataModule2(data_dir = data_path, batch_size = batch_size, num_workers = num_workers, experiment='Experiment2')
+dm_bavaria2 = BavariaDataModule3(data_dir = data_path, batch_size = batch_size, num_workers = num_workers, experiment='Experiment2')
 #experiment with 16/17 + 5% 2018 train and 2018 test
-dm_bavaria3 = BavariaDataModule2(data_dir = data_path, batch_size = batch_size, num_workers = num_workers, experiment='Experiment3')
+dm_bavaria3 = BavariaDataModule3(data_dir = data_path, batch_size = batch_size, num_workers = num_workers, experiment='Experiment3')
 #experiment with 16/17 + 10% 2018 train and 2018 test
-dm_bavaria4 = BavariaDataModule2(data_dir = data_path, batch_size = batch_size, num_workers = num_workers, experiment='Experiment4')
+dm_bavaria4 = BavariaDataModule3(data_dir = data_path, batch_size = batch_size, num_workers = num_workers, experiment='Experiment4')
 
 # %%
 # Plots the optimal learning rate
