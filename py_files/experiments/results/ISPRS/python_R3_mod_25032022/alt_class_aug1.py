@@ -108,7 +108,7 @@ if TRAIN==True:
     model_sim = SimSiam_LM(backbone,num_ftrs=num_ftrs,proj_hidden_dim=proj_hidden_dim,pred_hidden_dim=pred_hidden_dim,out_dim=out_dim,lr=lr)
     trainer = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs, logger=logger1)
     trainer.fit(model_sim, datamodule=dm_crops1)
-    torch.save(model_sim, 'model_sim_R1_aug1.ckpt')
+    torch.save(model_sim, 'model_sim1_R1_aug1.ckpt')
 
 
     transformer2 = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)

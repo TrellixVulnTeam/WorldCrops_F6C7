@@ -108,7 +108,7 @@ if TRAIN==True:
     model_sim = SimSiam_LM(backbone,num_ftrs=num_ftrs,proj_hidden_dim=proj_hidden_dim,pred_hidden_dim=pred_hidden_dim,out_dim=out_dim,lr=lr)
     trainer = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs, logger=logger1)
     trainer.fit(model_sim, datamodule=dm_crops1)
-    torch.save(model_sim, 'model_sim_R1_aug2.ckpt')
+    torch.save(model_sim, 'model_sim1_R1_aug2.ckpt')
 
 
     transformer2 = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
@@ -145,10 +145,9 @@ if TRAIN==True:
 
 ### CLASSIFICATION PART
 
-#%%
+#%% ALL DATA FOR EVALUATION
+
 train,test = dm_bavaria2.experiment2()
-print(train.shape)
-print(test.shape)
 
 #%%
 feature_list = ['B4_mean','B5_mean','B6_mean','B7_mean','B8_mean','B8A_mean','B9_mean','B11_mean','B12_mean']
@@ -162,10 +161,6 @@ for n in range(6):
     data_dict['2016'][n] = []
     data_dict['2017'][n] = []
     data_dict['2018'][n] = []
-    # for c in range(len(channel_idx)):
-    #     data_dict['2016'][n][c] = []
-    #     data_dict['2017'][n][c] = []
-    #     data_dict['2018'][n][c] = []
 
 data = train
 keys = data.keys()
@@ -199,87 +194,60 @@ print(np.array(data_dict['2018'][1]).shape)
 
 
 #%%
-# path = '/iarai/home/daniel.springer/Projects/WorldCrops/WorldCrops/py_files/experiments/results/ISPRS/logs_R2_23032022/pretrained_model/aug1/pretraining2.ckpt'
-# backbone2 = torch.load(path)
-# model_sim2 = SimSiam_LM(backbone2,num_ftrs=num_ftrs,proj_hidden_dim=proj_hidden_dim,pred_hidden_dim=pred_hidden_dim,out_dim=out_dim,lr=lr)
-# model_sim2 = model_sim2.eval()
-# model_sim2 = SimSiam_LM.load_from_checkpoint('model1.ckpt')
-model_sim2 = torch.load('../NEW_2/model_R1.ckpt')
-model_sim2 = model_sim2.eval()
-model_sim2 = model_sim2.cuda(1)
-# print(model_sim2)
-#%%
-in1 = data_dict['2016'][0][0]
-in2 = data_dict['2018'][0][0]
-in1 = np.array(in1, dtype=np.float32)
-in2 = np.array(in2, dtype=np.float32)
+for n in range(4):
+    FNAME = f'model_sim{n+1}_R1_aug1.ckpt'
+    SNAME = f'resuls_sim{n+1}_R1_aug1.ckpt'
+    print(FNAME)
 
-ce = lightly.loss.NegativeCosineSimilarity()
-(z0, p0),(z1, p1), embedding = model_sim2.forward(torch.tensor(in1).cuda(1)[None], torch.tensor(in2).cuda(1)[None])
-loss = 0.5 * (ce(z0, p1) + ce(z1, p0))
-print(loss)
+    model_sim2 = torch.load('model_sim_R1_aug1.ckpt')
+    model_sim2 = model_sim2.eval()
+    model_sim2 = model_sim2.cuda(1)
 
-    # %%
-ce = lightly.loss.NegativeCosineSimilarity()
-results_dict = {}
-results_dict['2016'] = {}
-results_dict['2017'] = {}
-results_dict['2018'] = {}
-for n in range(6):
-    results_dict['2016'][n] = []
-    results_dict['2017'][n] = []
-    results_dict['2018'][n] = []
+    ce = lightly.loss.NegativeCosineSimilarity()
+    results_dict = {}
+    results_dict['2016'] = {}
+    results_dict['2017'] = {}
+    results_dict['2018'] = {}
+    for n in range(6):
+        results_dict['2016'][n] = []
+        results_dict['2017'][n] = []
+        results_dict['2018'][n] = []
 
-prediction_year = ['2018']
+    prediction_year = ['2018']
 
-for y in range(len(prediction_year)):
-    year = prediction_year[y]
-    for k in range(6):
-        gd = 0
-        bd = 0
-        # print(k, len(data_dict[year][k]))
-        for l in range(len(data_dict[year][k])):
-            in2 = data_dict[year][k][l]
-            in2 = np.array(in2, dtype=np.float32)
-            loss_tot = np.zeros(6)
+    for y in range(len(prediction_year)):
+        year = prediction_year[y]
+        for k in range(6):
+            gd = 0
+            bd = 0
+            # print(k, len(data_dict[year][k]))
+            for l in range(len(data_dict[year][k])):
+                in2 = data_dict[year][k][l]
+                in2 = np.array(in2, dtype=np.float32)
+                loss_tot = np.zeros(6)
 
-            for m in range(6):
-                loss = 0
-                for n in range(len(data_dict['2016'][m])):
-                    in1 = data_dict['2016'][m][n]
-                    in1 = np.array(in1, dtype=np.float32)
-                    (z0, p0),(z1, p1), embedding = model_sim2.forward(torch.tensor(in1).cuda(1)[None], torch.tensor(in2).cuda(1)[None])
-                    loss += 0.5 * (ce(z0, p1) + ce(z1, p0))
-                for n in range(len(data_dict['2017'][m])):
-                    in1 = data_dict['2017'][m][n]
-                    in1 = np.array(in1, dtype=np.float32)
-                    (z0, p0),(z1, p1), embedding = model_sim2.forward(torch.tensor(in1).cuda(1)[None], torch.tensor(in2).cuda(1)[None])
-                    loss += 0.5 * (ce(z0, p1) + ce(z1, p0))
-                loss_tot[m] = loss.detach()
+                for m in range(6):
+                    loss = 0
+                    for n in range(len(data_dict['2016'][m])):
+                        in1 = data_dict['2016'][m][n]
+                        in1 = np.array(in1, dtype=np.float32)
+                        (z0, p0),(z1, p1), embedding = model_sim2.forward(torch.tensor(in1).cuda(1)[None], torch.tensor(in2).cuda(1)[None])
+                        loss += 0.5 * (ce(z0, p1) + ce(z1, p0))
+                    for n in range(len(data_dict['2017'][m])):
+                        in1 = data_dict['2017'][m][n]
+                        in1 = np.array(in1, dtype=np.float32)
+                        (z0, p0),(z1, p1), embedding = model_sim2.forward(torch.tensor(in1).cuda(1)[None], torch.tensor(in2).cuda(1)[None])
+                        loss += 0.5 * (ce(z0, p1) + ce(z1, p0))
+                    loss_tot[m] = loss.detach()
 
-            if (np.argmin(loss_tot)==k):
-                results_dict['2018'][k].append(1)
-                gd += 1
-                print(prediction_year[y], k, l+1, '/',len(data_dict[year][k]),  'Correct:', gd, 'Wrong:', bd)
-            else:
-                results_dict['2018'][k].append(0)
-                bd += 1
-                print(prediction_year[y], k, l+1, '/',len(data_dict[year][k]),  'Correct:', gd, 'Wrong:', bd)
+                if (np.argmin(loss_tot)==k):
+                    results_dict['2018'][k].append(1)
+                    gd += 1
+                    print(prediction_year[y], k, l+1, '/',len(data_dict[year][k]),  'Correct:', gd, 'Wrong:', bd)
+                else:
+                    results_dict['2018'][k].append(0)
+                    bd += 1
+                    print(prediction_year[y], k, l+1, '/',len(data_dict[year][k]),  'Correct:', gd, 'Wrong:', bd)
 
-            # break
-        # break
-
-
-# %%
-print(results_dict['2018'])
-
-print(sum(results_dict['2018'][0]))
-
-#%%
-torch.save(results_dict, 'Results')
-
-#%%
-fff = torch.load('Results')
-
-#%%
-print(len(fff['2018'][0]))
+    #%%
+    torch.save(results_dict, SNAME)
