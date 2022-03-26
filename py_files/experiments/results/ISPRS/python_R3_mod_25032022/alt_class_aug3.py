@@ -28,7 +28,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 data_path = '../../../../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx'
 
 #directory with logs
-pretrained_dir = "../logs/pretrained_model/aug1"
+pretrained_dir = "../logs/pretrained_model3/aug3"
 
 try:
     # Create target Directory
@@ -38,10 +38,10 @@ except FileExistsError:
     print("Directory " , pretrained_dir ,  " already exists")
 
 
-logger1 = TensorBoardLogger("../logs/ssl", name="aug3")
-logger2 = TensorBoardLogger("../logs/ssl", name="aug3")
-logger3 = TensorBoardLogger("../logs/ssl", name="aug3")
-logger4 = TensorBoardLogger("../logs/ssl", name="aug3")
+logger1 = TensorBoardLogger("../logs/ssl3", name="aug3")
+logger2 = TensorBoardLogger("../logs/ssl3", name="aug3")
+logger3 = TensorBoardLogger("../logs/ssl3", name="aug3")
+logger4 = TensorBoardLogger("../logs/ssl3", name="aug3")
 
 
 ################################

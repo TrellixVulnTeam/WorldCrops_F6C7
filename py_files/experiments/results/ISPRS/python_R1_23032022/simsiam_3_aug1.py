@@ -26,7 +26,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 ################################
 #IARAI / ESA
-IARAI = True
+IARAI = False
 no_gpus = 16
 # no_gpus = [0,1,2,3,4,5,6]
 
@@ -57,7 +57,7 @@ batch_size = 1349
 test_size = 0.25
 num_workers=4
 shuffle_dataset =True
-_epochs = 600
+_epochs = 100
 _epochs_fine = 300
 input_dim = 9
 lr =  0.0016612
@@ -109,7 +109,7 @@ dm_crops4 = AugmentationExperiments(data_dir = data_path, batch_size = batch_siz
 # 1. Pre-Train transformer unsupervised mit allen Daten (typische Augmentation + physikalisch)
 # 2. Finetune
 
-transformer = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
+transformer = Attention(input_dim=input_dim,num_classes = 2, n_head=4, nlayers=3)
 backbone = nn.Sequential(*list(transformer.children())[-2])
 model_sim = SimSiam_LM(backbone,num_ftrs=num_ftrs,proj_hidden_dim=proj_hidden_dim,pred_hidden_dim=pred_hidden_dim,out_dim=out_dim,lr=lr)
 
@@ -124,7 +124,7 @@ trainer.fit(model_sim, datamodule=dm_crops1)
 torch.save(backbone, pretrained_dir +"/pretraining1.ckpt")
 #%%
 #fit 
-transformer2 = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
+transformer2 = Attention(input_dim=input_dim,num_classes = 2, n_head=4, nlayers=3)
 backbone2 = nn.Sequential(*list(transformer2.children())[-2])
 model_sim2 = SimSiam_LM(backbone2,num_ftrs=num_ftrs,proj_hidden_dim=proj_hidden_dim,pred_hidden_dim=pred_hidden_dim,out_dim=out_dim,lr=lr)
 
@@ -136,7 +136,7 @@ trainer2.fit(model_sim2, datamodule=dm_crops2)
 torch.save(backbone2, pretrained_dir +"/pretraining2.ckpt")
 
 #%%
-transformer3 = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
+transformer3 = Attention(input_dim=input_dim,num_classes = 2, n_head=4, nlayers=3)
 backbone3 = nn.Sequential(*list(transformer3.children())[-2])
 model_sim3 = SimSiam_LM(backbone3,num_ftrs=num_ftrs,proj_hidden_dim=proj_hidden_dim,pred_hidden_dim=pred_hidden_dim,out_dim=out_dim,lr=lr)
 
@@ -149,7 +149,7 @@ else:
 trainer3.fit(model_sim3, datamodule=dm_crops3)
 torch.save(backbone3, pretrained_dir +"/pretraining3.ckpt")
 
-transformer4 = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
+transformer4 = Attention(input_dim=input_dim,num_classes = 2, n_head=4, nlayers=3)
 backbone4 = nn.Sequential(*list(transformer4.children())[-2])
 model_sim4 = SimSiam_LM(backbone4,num_ftrs=num_ftrs,proj_hidden_dim=proj_hidden_dim,pred_hidden_dim=pred_hidden_dim,out_dim=out_dim,lr=lr)
 
@@ -177,7 +177,7 @@ backbone_copy4 = copy.deepcopy(backbone4)
 #backbone_copy4 = torch.load(pretrained_dir + "/pretraining4.ckpt")
 
 
-
+'''
 # %%
 #use pretrained backbone and finetune 
 transformer1 = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
@@ -235,3 +235,4 @@ trainer.test(transfer_model4, datamodule = dm_bavaria4)
 
 # %%
 
+'''
