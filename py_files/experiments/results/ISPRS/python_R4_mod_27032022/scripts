@@ -1,0 +1,5 @@
+#!/bin/bash
+
+python alt_class_aug1.py
+python alt_class_aug2.py
+python alt_class_aug3.py
