@@ -93,8 +93,8 @@ for n in range(tot_samples):
 
 #%%
 for n in range(4):
-    FNAME = f'model_sim{n+1}_R4_aug2.ckpt'
-    SNAME = f'results_sim{n+1}_R4_aug2'
+    FNAME = f'model_sim{n+1}_R4_aug3.ckpt'
+    SNAME = f'results_sim{n+1}_R4_aug3'
     print(FNAME)
 
     model_sim2 = torch.load(FNAME)
@@ -154,7 +154,7 @@ for n in range(4):
 import torch
 
 for n in range(4):
-    SNAME = f'results_sim{n+1}_R4_aug1'
+    SNAME = f'results_sim{n+1}_R4_aug3'
     ttt = torch.load(SNAME)
     acc = 0
     inter = 0
