@@ -93,8 +93,8 @@ for n in range(tot_samples):
 
 #%%
 for n in range(4):
-    FNAME = f'model_sim{n+1}_R1_aug2.ckpt'
-    SNAME = f'results_sim{n+1}_R1_aug2'
+    FNAME = f'model_sim{n+1}_R1_aug3.ckpt'
+    SNAME = f'results_sim{n+1}_R1_aug3'
     print(FNAME)
 
     model_sim2 = torch.load(FNAME)
@@ -151,10 +151,37 @@ for n in range(4):
 
 #%%
 # import numpy as np
-# import torch
-# ttt = torch.load('test')
-# print(ttt['2018'])
+import torch
 
-# torch.save(ttt,'test')
+ttt = torch.load('results_sim1_R1_aug4')
+acc = 0
+inter = 0
+for n in range(6):
+    # print(ttt['2018'][n].count(1))
+    acc += ttt['2018'][n].count(1)
+print(acc/6)
+
+ttt = torch.load('results_sim2_R1_aug4')
+acc = 0
+for n in range(6):
+    # print(ttt['2018'][n].count(1))
+    acc += ttt['2018'][n].count(1)
+print(acc/6)
+
+ttt = torch.load('results_sim3_R1_aug4')
+acc = 0
+for n in range(6):
+    # print(ttt['2018'][n].count(1))
+    acc += ttt['2018'][n].count(1)
+print(acc/6)
+# print(ttt)
+
+ttt = torch.load('results_sim4_R1_aug4')
+acc = 0
+for n in range(6):
+    # print(ttt['2018'][n].count(1))
+    acc += ttt['2018'][n].count(1)
+print(acc/6)
+
 
 # %%
