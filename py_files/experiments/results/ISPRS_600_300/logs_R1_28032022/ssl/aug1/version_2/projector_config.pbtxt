@@ -1,0 +1,50 @@
+embeddings {
+  tensor_name: "pretraining embedding:00000"
+  metadata_path: "00000/pretraining embedding/metadata.tsv"
+  tensor_path: "00000/pretraining embedding/tensors.tsv"
+}
+embeddings {
+  tensor_name: "pretraining embedding:00010"
+  metadata_path: "00010/pretraining embedding/metadata.tsv"
+  tensor_path: "00010/pretraining embedding/tensors.tsv"
+}
+embeddings {
+  tensor_name: "pretraining embedding:00020"
+  metadata_path: "00020/pretraining embedding/metadata.tsv"
+  tensor_path: "00020/pretraining embedding/tensors.tsv"
+}
+embeddings {
+  tensor_name: "pretraining embedding:00030"
+  metadata_path: "00030/pretraining embedding/metadata.tsv"
+  tensor_path: "00030/pretraining embedding/tensors.tsv"
+}
+embeddings {
+  tensor_name: "pretraining embedding:00040"
+  metadata_path: "00040/pretraining embedding/metadata.tsv"
+  tensor_path: "00040/pretraining embedding/tensors.tsv"
+}
+embeddings {
+  tensor_name: "pretraining embedding:00050"
+  metadata_path: "00050/pretraining embedding/metadata.tsv"
+  tensor_path: "00050/pretraining embedding/tensors.tsv"
+}
+embeddings {
+  tensor_name: "pretraining embedding:00060"
+  metadata_path: "00060/pretraining embedding/metadata.tsv"
+  tensor_path: "00060/pretraining embedding/tensors.tsv"
+}
+embeddings {
+  tensor_name: "pretraining embedding:00070"
+  metadata_path: "00070/pretraining embedding/metadata.tsv"
+  tensor_path: "00070/pretraining embedding/tensors.tsv"
+}
+embeddings {
+  tensor_name: "pretraining embedding:00080"
+  metadata_path: "00080/pretraining embedding/metadata.tsv"
+  tensor_path: "00080/pretraining embedding/tensors.tsv"
+}
+embeddings {
+  tensor_name: "pretraining embedding:00090"
+  metadata_path: "00090/pretraining embedding/metadata.tsv"
+  tensor_path: "00090/pretraining embedding/tensors.tsv"
+}
