@@ -33,7 +33,7 @@ no_gpus = 16
 data_path = '../../../../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx'
 
 #directory with logs
-pretrained_dir = "../logs/pretrained_model/aug1"
+pretrained_dir = "../logs/pretrained_model_image/aug1"
 
 try:
     # Create target Directory
@@ -43,10 +43,10 @@ except FileExistsError:
     print("Directory " , pretrained_dir ,  " already exists")
 
 
-logger1 = TensorBoardLogger("../logs/ssl", name="aug1")
-logger2 = TensorBoardLogger("../logs/ssl", name="aug1")
-logger3 = TensorBoardLogger("../logs/ssl", name="aug1")
-logger4 = TensorBoardLogger("../logs/ssl", name="aug1")
+logger1 = TensorBoardLogger("../logs/ssl_image", name="aug1")
+logger2 = TensorBoardLogger("../logs/ssl_image", name="aug1")
+logger3 = TensorBoardLogger("../logs/ssl_image", name="aug1")
+logger4 = TensorBoardLogger("../logs/ssl_image", name="aug1")
 
 
 ################################
@@ -57,7 +57,7 @@ batch_size = 1349
 test_size = 0.25
 num_workers=4
 shuffle_dataset =True
-_epochs = 100
+_epochs = 600
 _epochs_fine = 300
 input_dim = 9
 lr =  0.0016612
@@ -104,12 +104,12 @@ dm_crops3 = AugmentationExperiments(data_dir = data_path, batch_size = batch_siz
 dm_crops4 = AugmentationExperiments(data_dir = data_path, batch_size = batch_size_sim, num_workers = num_workers, experiment='Experiment7')
 
 
+
 # %%
 # Vorgehen:
 # 1. Pre-Train transformer unsupervised mit allen Daten (typische Augmentation + physikalisch)
 # 2. Finetune
-
-transformer = Attention(input_dim=input_dim,num_classes = 2, n_head=4, nlayers=3)
+transformer = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
 backbone = nn.Sequential(*list(transformer.children())[-2])
 model_sim = SimSiam_LM(backbone,num_ftrs=num_ftrs,proj_hidden_dim=proj_hidden_dim,pred_hidden_dim=pred_hidden_dim,out_dim=out_dim,lr=lr)
 
@@ -121,10 +121,10 @@ else:
 
 #fit the first time with one augmentation
 trainer.fit(model_sim, datamodule=dm_crops1)
-torch.save(backbone, pretrained_dir +"/pretraining1.ckpt")
+#torch.save(backbone, pretrained_dir +"/pretraining1.ckpt")
 #%%
 #fit 
-transformer2 = Attention(input_dim=input_dim,num_classes = 2, n_head=4, nlayers=3)
+transformer2 = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
 backbone2 = nn.Sequential(*list(transformer2.children())[-2])
 model_sim2 = SimSiam_LM(backbone2,num_ftrs=num_ftrs,proj_hidden_dim=proj_hidden_dim,pred_hidden_dim=pred_hidden_dim,out_dim=out_dim,lr=lr)
 
@@ -133,10 +133,10 @@ if IARAI:
 else:
     trainer2 = pl.Trainer(deterministic=True, max_epochs = _epochs, logger=logger2)
 trainer2.fit(model_sim2, datamodule=dm_crops2)
-torch.save(backbone2, pretrained_dir +"/pretraining2.ckpt")
+#torch.save(backbone2, pretrained_dir +"/pretraining2.ckpt")
 
 #%%
-transformer3 = Attention(input_dim=input_dim,num_classes = 2, n_head=4, nlayers=3)
+transformer3 = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
 backbone3 = nn.Sequential(*list(transformer3.children())[-2])
 model_sim3 = SimSiam_LM(backbone3,num_ftrs=num_ftrs,proj_hidden_dim=proj_hidden_dim,pred_hidden_dim=pred_hidden_dim,out_dim=out_dim,lr=lr)
 
@@ -146,10 +146,10 @@ if IARAI:
 else:
     trainer3 = pl.Trainer(deterministic=True, max_epochs = _epochs, logger=logger3)
 
-trainer3.fit(model_sim3, datamodule=dm_crops3)
-torch.save(backbone3, pretrained_dir +"/pretraining3.ckpt")
+#trainer3.fit(model_sim3, datamodule=dm_crops3)
+#torch.save(backbone3, pretrained_dir +"/pretraining3.ckpt")
 
-transformer4 = Attention(input_dim=input_dim,num_classes = 2, n_head=4, nlayers=3)
+transformer4 = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
 backbone4 = nn.Sequential(*list(transformer4.children())[-2])
 model_sim4 = SimSiam_LM(backbone4,num_ftrs=num_ftrs,proj_hidden_dim=proj_hidden_dim,pred_hidden_dim=pred_hidden_dim,out_dim=out_dim,lr=lr)
 
@@ -159,8 +159,8 @@ if IARAI:
 else:
     trainer4 = pl.Trainer(deterministic=True, max_epochs = _epochs, logger=logger4)
 
-trainer4.fit(model_sim4, datamodule=dm_crops4)
-torch.save(backbone4, pretrained_dir + "/pretraining4.ckpt")
+#trainer4.fit(model_sim4, datamodule=dm_crops4)
+#torch.save(backbone4, pretrained_dir + "/pretraining4.ckpt")
 #%%
 
 #%%
@@ -168,8 +168,8 @@ torch.save(backbone4, pretrained_dir + "/pretraining4.ckpt")
 #copy pretrained backbone for experiments
 backbone_copy1 = copy.deepcopy(backbone)
 backbone_copy2 = copy.deepcopy(backbone2)
-backbone_copy3 = copy.deepcopy(backbone3)
-backbone_copy4 = copy.deepcopy(backbone4)
+#backbone_copy3 = copy.deepcopy(backbone3)
+#backbone_copy4 = copy.deepcopy(backbone4)
 
 #backbone_copy1 = torch.load(pretrained_dir + "/pretraining1.ckpt")
 #backbone_copy2 = torch.load(pretrained_dir + "/pretraining2.ckpt")
@@ -177,7 +177,7 @@ backbone_copy4 = copy.deepcopy(backbone4)
 #backbone_copy4 = torch.load(pretrained_dir + "/pretraining4.ckpt")
 
 
-'''
+
 # %%
 #use pretrained backbone and finetune 
 transformer1 = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
@@ -216,8 +216,8 @@ if IARAI:
 else:
     trainer = pl.Trainer(deterministic=True, max_epochs= _epochs_fine, logger=logger3)
 
-trainer.fit(transfer_model3, datamodule = dm_bavaria3)
-trainer.test(transfer_model3, datamodule = dm_bavaria3)
+#trainer.fit(transfer_model3, datamodule = dm_bavaria3)
+#trainer.test(transfer_model3, datamodule = dm_bavaria3)
 
 # %%
 transformer4 = Attention(input_dim=input_dim, num_classes = 6, n_head=4, nlayers=3)
@@ -230,9 +230,8 @@ if IARAI:
 else:
     trainer = pl.Trainer(deterministic=True, max_epochs= _epochs_fine, logger=logger4)
 
-trainer.fit(transfer_model4, datamodule = dm_bavaria4)
-trainer.test(transfer_model4, datamodule = dm_bavaria4)
+#trainer.fit(transfer_model4, datamodule = dm_bavaria4)
+#trainer.test(transfer_model4, datamodule = dm_bavaria4)
 
 # %%
 
-'''
