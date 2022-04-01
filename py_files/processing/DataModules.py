@@ -91,6 +91,50 @@ class BavariaDataModule(pl.LightningDataModule):
         test = _2018
         return train, test
 
+    def exp_without1617_5Prozent(self):
+        '''data 5% 2018 '''
+        #amount of data in % sampled from 2018
+        percent = 5
+
+        unlabeled = self.data[self.data.Year != 2018]
+        # x percent sample data for 2018
+        _2018 = self.data[self.data.Year == 2018]
+        samples = pd.DataFrame()
+
+        for i in range(0,6):
+            _ids = _2018[_2018.NC == i].id.unique().tolist()
+            
+            for id in _ids[:percent]:
+                sample = _2018[_2018.id == id]
+                samples = pd.concat([samples, sample], axis = 0)
+                _2018 = _2018.drop(_2018[_2018.id == id].index)
+
+        train = samples
+        test = _2018
+        return train, test, unlabeled
+
+    def exp_without1617_10Prozent(self):
+        '''data 10% 2018 '''
+        #amount of data in % sampled from 2018
+        percent = 10
+
+        unlabeled = self.data[self.data.Year != 2018]
+        # x percent sample data for 2018
+        _2018 = self.data[self.data.Year == 2018]
+        samples = pd.DataFrame()
+
+        for i in range(0,6):
+            _ids = _2018[_2018.NC == i].id.unique().tolist()
+            
+            for id in _ids[:percent]:
+                sample = _2018[_2018.id == id]
+                samples = pd.concat([samples, sample], axis = 0)
+                _2018 = _2018.drop(_2018[_2018.id == id].index)
+
+        train = samples
+        test = _2018
+        return train, test, unlabeled
+
     def setup(self, stage: Optional[str] = None):
 
         if self.experiment == 'Experiment1':
@@ -118,6 +162,16 @@ class BavariaDataModule(pl.LightningDataModule):
 
         elif self.experiment == 'Experiment4':
             train, test = self.experiment4()
+            ts_train = TSDataSet(train, self.feature_list, 'NC', field_id = 'id',  time_steps = 11)
+            ts_test = TSDataSet(test, self.feature_list, 'NC', field_id = 'id',  time_steps = 11)
+
+        elif self.experiment == 'Experiment5':
+            train, test, _ = self.exp_without1617_5Prozent()
+            ts_train = TSDataSet(train, self.feature_list, 'NC', field_id = 'id',  time_steps = 11)
+            ts_test = TSDataSet(test, self.feature_list, 'NC', field_id = 'id',  time_steps = 11)
+
+        elif self.experiment == 'Experiment6':
+            train, test, _= self.exp_without1617_10Prozent()
             ts_train = TSDataSet(train, self.feature_list, 'NC', field_id = 'id',  time_steps = 11)
             ts_test = TSDataSet(test, self.feature_list, 'NC', field_id = 'id',  time_steps = 11)
 
@@ -242,6 +296,52 @@ class AugmentationExperiments(pl.LightningDataModule):
         test = _2018
         return train, test
 
+    def exp_without1617_5Prozent(self):
+        '''data 5% 2018 '''
+        #amount of data in % sampled from 2018
+        percent = 5
+
+        unlabeled = self.data[self.data.Year != 2018]
+        # x percent sample data for 2018
+        _2018 = self.data[self.data.Year == 2018]
+        samples = pd.DataFrame()
+
+        for i in range(0,6):
+            _ids = _2018[_2018.NC == i].id.unique().tolist()
+            
+            for id in _ids[:percent]:
+                sample = _2018[_2018.id == id]
+                samples = pd.concat([samples, sample], axis = 0)
+                _2018 = _2018.drop(_2018[_2018.id == id].index)
+
+        train2 = pd.concat([unlabeled,samples],axis = 0)
+        train = samples
+        test = _2018
+        return train, test, train2
+
+    def exp_without1617_10Prozent(self):
+        '''data 10% 2018 '''
+        #amount of data in % sampled from 2018
+        percent = 10
+
+        unlabeled = self.data[self.data.Year != 2018]
+        # x percent sample data for 2018
+        _2018 = self.data[self.data.Year == 2018]
+        samples = pd.DataFrame()
+
+        for i in range(0,6):
+            _ids = _2018[_2018.NC == i].id.unique().tolist()
+            
+            for id in _ids[:percent]:
+                sample = _2018[_2018.id == id]
+                samples = pd.concat([samples, sample], axis = 0)
+                _2018 = _2018.drop(_2018[_2018.id == id].index)
+
+        train2 = pd.concat([unlabeled,samples],axis = 0)
+        train = samples
+        test = _2018
+        return train, test, train2 
+
 
 
     def setup(self, stage: Optional[str] = None):
@@ -333,6 +433,23 @@ class AugmentationExperiments(pl.LightningDataModule):
             b = test.mean()[self.feature_list].to_numpy()
             diff = b-a
             #ts_data = Shift_TS(train, factor=8, diff = diff, feature_list = self.feature_list, time_steps = 11)
+
+        elif self.experiment == 'Experiment16':
+            ''' Train invariance between crops for 2016/2017 + 5% from 2018 '''
+            train, _, unlabeled = self.exp_without1617_5Prozent()
+            ts_data = CropInvarianceAug(train, self.feature_list, size=10000, time_steps = 11)
+
+        elif self.experiment == 'Experiment17':
+            train, _, unlabeled = self.exp_without1617_10Prozent()
+            ts_data = CropInvarianceAug(train, self.feature_list, size=10000, time_steps = 11)
+
+        elif self.experiment == 'Experiment18':
+            train, _, unlabeled = self.exp_without1617_5Prozent()
+            ts_data = DriftNoiseAug(unlabeled, factor=8, feature_list=self.feature_list, time_steps = 11)
+
+        elif self.experiment == 'Experiment19':
+            train, _, unlabeled = self.exp_without1617_10Prozent()
+            ts_data = DriftNoiseAug(unlabeled, factor=8, feature_list=self.feature_list, time_steps = 11)
 
 
         else:

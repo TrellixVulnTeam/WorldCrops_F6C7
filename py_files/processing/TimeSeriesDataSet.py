@@ -562,8 +562,8 @@ class CropInvarianceAug2(Dataset):
 
         X1 = data[data.id == field_id1][features].to_numpy()
         X2 = data[data.id == field_id2][features].to_numpy()
-        X1 = OwnAugmentation.constant_noise(X1, 7000)
-        X2 = OwnAugmentation.constant_noise(X2, 7000)
+        X1 = Drift(max_drift=0.1, n_drift_points=2).augment(X1)#OwnAugmentation.constant_noise(X1, 7000)
+        X2 = Drift(max_drift=0.1, n_drift_points=2).augment(X2)#OwnAugmentation.constant_noise(X2, 7000)
 
         return X1, X2, random_crop
 
