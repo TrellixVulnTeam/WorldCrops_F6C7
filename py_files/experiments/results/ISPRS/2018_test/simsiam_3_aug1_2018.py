@@ -27,7 +27,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 ################################
 #IARAI / ESA
 IARAI = True
-no_gpus = 16
+no_gpus = 1
 # no_gpus = [0,1,2,3,4,5,6]
 PA = False
 data_path = '../../../../../data/cropdata/Bavaria/sentinel-2/Training_bavaria.xlsx'
