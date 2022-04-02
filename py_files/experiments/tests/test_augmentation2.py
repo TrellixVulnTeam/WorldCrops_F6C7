@@ -2,7 +2,9 @@
 # compare the crop type classification of RF and SimSiam
 import sys
 
-sys.path.append('/home/daniel/QM-Encoder/worldcrops/WorldCrops/WorldCrops/py_files')
+#sys.path.append('/home/daniel/QM-Encoder/worldcrops/WorldCrops/WorldCrops/py_files')
+sys.path.append('/workspace/WorldCrops/py_files/')
+
 sys.path.append('..')
 
 from model import *
@@ -90,17 +92,42 @@ test_RF = test_RF[test_RF.NC != 6]
 
 train = utils.rewrite_id_CustomDataSet(train)
 test = utils.rewrite_id_CustomDataSet(test)
+
+train = train[(train['Date'] >= "03-30") ]
+
 #%%
-feature_list = train.columns[train.columns.str.contains('B')]
-# len(train.id.unique())
+percent = 10
+
+unlabeled = train[train.Year != 2018]
+# x percent sample data for 2018
+_2018 = train[train.Year == 2018]
+samples = pd.DataFrame()
+
+for i in range(0,6):
+    _ids = _2018[_2018.NC == i].id.unique().tolist()
+    
+    for id in _ids[:percent]:
+        sample = _2018[_2018.id == id]
+        samples = pd.concat([samples, sample], axis = 0)
+        _2018 = _2018.drop(_2018[_2018.id == id].index)
+#
+#train = samples
+#test = _2018
 #%%
-print(train.shape)
-print(train.keys())
-print(train['Year'][10000])
-trainx = train[feature_list].values
-df = trainx.reshape(1799,14, len(feature_list))
+samples.id.unique()
 #%%
 
+samples[samples.NC == 2].groupby(['Date']).mean()[['B8_mean','B11_mean']].plot()
+
+#%%
+
+#print(_2018.id.unique())
+_2018[_2018.NC == 2].groupby(['Date']).mean()[['B8_mean','B11_mean']].plot()
+
+#%%
+
+samples
+#%%
 class AugmentationSampling():
     '''Obtain mean and std for each timestep from dataset and draw augmentation from that.
        REQUIRES: data[type,channel,timestep,samples]
