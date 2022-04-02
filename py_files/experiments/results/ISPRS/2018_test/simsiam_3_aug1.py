@@ -26,7 +26,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 ################################
 #IARAI / ESA
-IARAI = False
+IARAI = True
 no_gpus = 16
 # no_gpus = [0,1,2,3,4,5,6]
 
@@ -57,8 +57,8 @@ batch_size = 1349
 test_size = 0.25
 num_workers=4
 shuffle_dataset =True
-_epochs = 1
-_epochs_fine = 1
+_epochs = 600
+_epochs_fine = 300
 input_dim = 9
 lr =  0.0016612
 
