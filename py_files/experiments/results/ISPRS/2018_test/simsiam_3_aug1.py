@@ -26,7 +26,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 ################################
 #IARAI / ESA
-IARAI = True
+IARAI = False
 no_gpus = 1
 # no_gpus = [0,1,2,3,4,5,6]
 
@@ -132,8 +132,8 @@ if IARAI:
     trainer2 = pl.Trainer(gpus=no_gpus, strategy='ddp', deterministic=True, max_epochs = _epochs, logger=logger2)
 else:
     trainer2 = pl.Trainer(deterministic=True, max_epochs = _epochs, logger=logger2)
-trainer2.fit(model_sim2, datamodule=dm_crops2)
-torch.save(backbone2, pretrained_dir +"/pretraining2.ckpt")
+#trainer2.fit(model_sim2, datamodule=dm_crops2)
+#torch.save(backbone2, pretrained_dir +"/pretraining2.ckpt")
 
 #%%
 transformer3 = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
@@ -146,8 +146,8 @@ if IARAI:
 else:
     trainer3 = pl.Trainer(deterministic=True, max_epochs = _epochs, logger=logger3)
 
-trainer3.fit(model_sim3, datamodule=dm_crops3)
-torch.save(backbone3, pretrained_dir +"/pretraining3.ckpt")
+#trainer3.fit(model_sim3, datamodule=dm_crops3)
+#torch.save(backbone3, pretrained_dir +"/pretraining3.ckpt")
 
 transformer4 = Attention(input_dim=input_dim,num_classes = 6, n_head=4, nlayers=3)
 backbone4 = nn.Sequential(*list(transformer4.children())[-2])
@@ -159,17 +159,17 @@ if IARAI:
 else:
     trainer4 = pl.Trainer(deterministic=True, max_epochs = _epochs, logger=logger4)
 
-trainer4.fit(model_sim4, datamodule=dm_crops4)
-torch.save(backbone4, pretrained_dir + "/pretraining4.ckpt")
+#trainer4.fit(model_sim4, datamodule=dm_crops4)
+#torch.save(backbone4, pretrained_dir + "/pretraining4.ckpt")
 #%%
 
 #%%
 #backbone = torch.load("../model/pretrained/backbone_3_aug_17.2.ckpt")
 #copy pretrained backbone for experiments
 backbone_copy1 = copy.deepcopy(backbone)
-backbone_copy2 = copy.deepcopy(backbone2)
-backbone_copy3 = copy.deepcopy(backbone3)
-backbone_copy4 = copy.deepcopy(backbone4)
+backbone_copy2 = copy.deepcopy(backbone)
+backbone_copy3 = copy.deepcopy(backbone)
+backbone_copy4 = copy.deepcopy(backbone)
 
 #backbone_copy1 = torch.load(pretrained_dir + "/pretraining1.ckpt")
 #backbone_copy2 = torch.load(pretrained_dir + "/pretraining2.ckpt")
@@ -203,8 +203,8 @@ if IARAI:
 else:
     trainer = pl.Trainer(deterministic=True, max_epochs= _epochs_fine, logger=logger2)
 
-trainer.fit(transfer_model2, datamodule = dm_bavaria2)
-trainer.test(transfer_model2, datamodule = dm_bavaria2)
+#trainer.fit(transfer_model2, datamodule = dm_bavaria2)
+#trainer.test(transfer_model2, datamodule = dm_bavaria2)
 # %%
 transformer3 = Attention(input_dim=input_dim, num_classes = 6, n_head=4, nlayers=3)
 head3 = nn.Sequential(*list(transformer3.children())[-1])
@@ -216,8 +216,8 @@ if IARAI:
 else:
     trainer = pl.Trainer(deterministic=True, max_epochs= _epochs_fine, logger=logger3)
 
-trainer.fit(transfer_model3, datamodule = dm_bavaria3)
-trainer.test(transfer_model3, datamodule = dm_bavaria3)
+#trainer.fit(transfer_model3, datamodule = dm_bavaria3)
+#trainer.test(transfer_model3, datamodule = dm_bavaria3)
 
 # %%
 transformer4 = Attention(input_dim=input_dim, num_classes = 6, n_head=4, nlayers=3)
@@ -230,8 +230,8 @@ if IARAI:
 else:
     trainer = pl.Trainer(deterministic=True, max_epochs= _epochs_fine, logger=logger4)
 
-trainer.fit(transfer_model4, datamodule = dm_bavaria4)
-trainer.test(transfer_model4, datamodule = dm_bavaria4)
+#trainer.fit(transfer_model4, datamodule = dm_bavaria4)
+#trainer.test(transfer_model4, datamodule = dm_bavaria4)
 
 # %%
 
