@@ -468,8 +468,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 filters=[32, 64, 128, 256]
 tb_logger = pl_loggers.TensorBoardLogger(save_dir=path_to_logdir)
 
-_encoder = ResUnetEncoder(channel=channels, filters =filters, dropout = dropout)
-model = UNet_Transfer(lr = learning_rate, backbone=_encoder,  dropout = dropout, filters =filters, batch_size  = batch_size_pre, finetune= False)
+_encoder = ssl.model.ResUnetEncoder(channel=channels, filters =filters, dropout = dropout)
+model = ssl.model.UNet_Transfer(lr = cfg["pretraining"]['learning_rate'], backbone=_encoder,  dropout = dropout, filters =filters, batch_size  = batch_size_pre, finetune= False)
 
 trainer = pl.Trainer(gpus=cfg["pretraining"]['gpus'], deterministic=True, max_epochs = cfg["pretraining"]['epochs'], logger=tb_logger, log_every_n_steps=log_interval)
 
