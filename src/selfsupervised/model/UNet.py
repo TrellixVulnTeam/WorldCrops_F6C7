@@ -324,8 +324,10 @@ class UNet_Transfer(pl.LightningModule):
         else:
             optimizer = torch.optim.Adam(self.decoder.parameters(),lr = self.lr)
 
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=8, min_lr=1e-6, verbose=True)
-        return [optimizer], [scheduler]
+        #scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=8, min_lr=1e-6, verbose=True)
+        #return [optimizer], [scheduler]
+        #return { 'optimizer': optimizer, 'lr_scheduler': scheduler, 'monitor': 'val_loss'}
+        return optimizer
 
     def test_step(self, test_batch, batch_idx):
         x, y = test_batch
