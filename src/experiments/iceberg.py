@@ -114,9 +114,10 @@ def test_function( model , data, mask):
                 
                 ax1 = fig.add_subplot(4,6,z)  
                 plt.imshow(np.squeeze(pred))
-                plt.xticks([0, 256], " ")
-                plt.yticks([0, 256], " ")
                 z=z+1
+                
+                print(min(pred.flatten()))
+                print(max(pred.flatten()))
 
         y_true_list = torch.cat(y_true_list).squeeze().numpy()
         y_pred_list = torch.cat(y_pred_list).squeeze().numpy()
@@ -425,7 +426,7 @@ test_y = torch.Tensor(y_test[:,np.newaxis, :, :])
 my_test_dataset = torch.utils.data.TensorDataset(test_x,test_y)
 my_test_dataloader = torch.utils.data.DataLoader(my_test_dataset, 
     batch_size=batch_size_fine,
-    shuffle=True,
+    shuffle=False,
     drop_last=False,
     num_workers=num_workers) 
 # %%
@@ -488,7 +489,7 @@ trainer = pl.Trainer(gpus=cfg["pretraining"]['gpus'], deterministic=True, max_ep
 trainer.fit(model, my_dataloader, my_val_dataloader)
 
 #save model
-torch.save(model, path_to_modeldir + 'iceberg_baseline.ckpt')
+torch.save(model, path_to_modeldir)
 
 
 ###################################################################
@@ -539,8 +540,6 @@ z=1;
 for i in idxs:
   ax1 = fig.add_subplot(4,6,z)  
   plt.imshow(np.squeeze(y_pred[i, :, :]))
-  plt.xticks([0, 256], " ")
-  plt.yticks([0, 256], " ")
   z=z+1
 
 
