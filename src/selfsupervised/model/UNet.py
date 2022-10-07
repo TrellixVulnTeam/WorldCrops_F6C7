@@ -335,6 +335,9 @@ class UNet_Transfer(pl.LightningModule):
         loss = self.ce(y_pred, y)
         #self.log('train_loss', loss, on_step = True, on_epoch = True, prog_bar=True, logger=True)
         self.logger.experiment.add_scalar('test_loss', loss, global_step=self.global_step)
+        # add sigmoid for actual prediction
+        sigm = nn.Sigmoid()
+        y_pred=sigm(y_pred)
         y_true = y.detach()
         return {'test_loss' : loss, 'y_pred' : y_pred, 'y_true' : y}
 
