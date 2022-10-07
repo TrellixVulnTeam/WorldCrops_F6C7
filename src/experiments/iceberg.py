@@ -109,6 +109,9 @@ def test_function( model , data, mask):
                 loss = criterion(pred, y_true)
                 iterator.set_description(f"test loss={loss:.2f}")
                 losses.append(loss)
+                # add sigmoid for actual prediction
+                sigm = nn.Sigmoid()
+                pred=sigm(pred)
                 y_true_list.append(y_true)
                 y_pred_list.append(pred)
                 
