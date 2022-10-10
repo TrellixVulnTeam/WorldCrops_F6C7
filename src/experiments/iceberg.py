@@ -491,10 +491,11 @@ trainer = pl.Trainer(gpus=cfg["pretraining"]['gpus'], deterministic=True, max_ep
 
 trainer.fit(model, my_dataloader, my_val_dataloader)
 
+
 #save model
 torch.save(model, path_to_modeldir)
 
-
+# %%
 ###################################################################
 # Model SimSiam --- Pretraining
 # Use a UNET encoder and pretrain it using the defined augmentations
