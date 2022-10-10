@@ -10,7 +10,7 @@ pretraining:
   num_ftrs: 512
   #input size of image
   input_size: 256
-  log_interval: 5
+  log_interval: 1
 
 finetuning:
   batch_size: 1
