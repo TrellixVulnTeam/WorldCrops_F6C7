@@ -459,7 +459,9 @@ fig = lightly.utils.debug.plot_augmented_images(input_images, collate_fn)
 # %%
 iterator=iter(my_dataloader)
 inputs= next(iterator)
-inputs[0].shape
+#inputs[0].shape
+
+print(log_interval)
 
 # %%
 
@@ -476,21 +478,7 @@ _encoder = ssl.model.ResUnetEncoder(channel=channels, filters =filters, dropout 
 model = ssl.model.UNet_Transfer(lr = cfg["pretraining"]['learning_rate'], backbone=_encoder,  dropout = dropout, filters =filters, batch_size  = batch_size_pre, finetune= False)
 
 trainer = pl.Trainer(gpus=cfg["pretraining"]['gpus'], deterministic=True, max_epochs = cfg["pretraining"]['epochs'], logger=tb_logger, log_every_n_steps=log_interval)
-
-# this is how you could use reducting learning rates, but val_loss is empty
-
-#optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-#scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5)
-#trainer = pl.Trainer(gpus=cfg["pretraining"]['gpus'], deterministic=True, max_epochs = 1, logger=tb_logger, log_every_n_steps=log_interval)
-
-#for epoch in range(10):
- # trainer.fit(model, my_dataloader) # epochs should be set to one above!
-  #val_loss = trainer.validate(dataloaders=my_val_dataloader)
-  #print(val_loss['val_loss'])
-  #scheduler.step(val_loss)
-
 trainer.fit(model, my_dataloader, my_val_dataloader)
-
 
 #save model
 torch.save(model, path_to_modeldir)

@@ -278,8 +278,7 @@ class UNet_Transfer(pl.LightningModule):
         x, y = batch
         y_pred = self.forward(x)
         loss = self.ce(y_pred, y)
-        #self.log('train_loss', loss, on_step = True, on_epoch = True, prog_bar=True, logger=True)
-        self.logger.experiment.add_scalar('train_loss', loss, global_step=self.global_step)
+        self.log('train_loss', loss, on_step = True, on_epoch = True, prog_bar=True, logger=True)
 
         y_true = y.detach()
         #y_pred = y_pred.argmax(-1).detach()
@@ -301,7 +300,6 @@ class UNet_Transfer(pl.LightningModule):
         x, y = val_batch
         y_pred = self.forward(x)
         loss = self.ce(y_pred, y)
-        self.logger.experiment.add_scalar('val_loss', loss, global_step=self.global_step)
         y_true = y.detach()
         return {'val_loss' : loss}
         #pass
@@ -313,6 +311,7 @@ class UNet_Transfer(pl.LightningModule):
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()  
         avg_loss=float(avg_loss)
         dict_={'val_loss' : avg_loss}
+        self.log('val_loss', avg_loss, prog_bar=True, logger=True)
         print(dict_)
         return dict_
         #pass
@@ -324,17 +323,17 @@ class UNet_Transfer(pl.LightningModule):
         else:
             optimizer = torch.optim.Adam(self.decoder.parameters(),lr = self.lr)
 
-        #scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=8, min_lr=1e-6, verbose=True)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=4, min_lr=1e-6, verbose=True)
         #return [optimizer], [scheduler]
-        #return { 'optimizer': optimizer, 'lr_scheduler': scheduler, 'monitor': 'val_loss'}
-        return optimizer
+        return { 'optimizer': optimizer, 'lr_scheduler': scheduler, 'monitor': 'val_loss'}
+        #return optimizer
 
     def test_step(self, test_batch, batch_idx):
         x, y = test_batch
         y_pred = self.forward(x)
         loss = self.ce(y_pred, y)
         #self.log('train_loss', loss, on_step = True, on_epoch = True, prog_bar=True, logger=True)
-        self.logger.experiment.add_scalar('test_loss', loss, global_step=self.global_step)
+        self.log('test_loss', loss, prog_bar=True, logger=True)
         # add sigmoid for actual prediction
         sigm = nn.Sigmoid()
         y_pred=sigm(y_pred)
