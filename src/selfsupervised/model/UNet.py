@@ -313,6 +313,7 @@ class UNet_Transfer(pl.LightningModule):
         dict_={'val_loss' : avg_loss}
         self.log('val_loss', avg_loss, prog_bar=True, logger=True)
         print(dict_)
+        print(self.lr)
         return dict_
         #pass
 

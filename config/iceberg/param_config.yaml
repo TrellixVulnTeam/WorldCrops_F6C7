@@ -21,7 +21,7 @@ finetuning:
 
 UNet:
   # define the number of channels in the input, number of classes,
-  channels: 1
+  channels: 3
   num_classes: 1
   dropout: 0.3
 

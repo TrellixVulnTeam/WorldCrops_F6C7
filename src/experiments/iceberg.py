@@ -211,7 +211,7 @@ collate_fn = lightly.data.ImageCollateFunction(
     cj_hue=0.1,
     cj_sat=0.1,
     #gaussian blur to be invariant for texture details
-    gaussian_blur=0.3
+    gaussian_blur=0.05
 
 )
 
@@ -432,7 +432,7 @@ my_test_dataloader = torch.utils.data.DataLoader(my_test_dataset,
     shuffle=False,
     drop_last=False,
     num_workers=num_workers) 
-# %%
+
 tensor_x.shape
 
 # %%
